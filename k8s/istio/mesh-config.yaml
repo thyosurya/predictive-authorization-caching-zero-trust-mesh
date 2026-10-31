@@ -1,0 +1,24 @@
+# k8s/istio/mesh-config.yaml
+# MeshConfig untuk mendefinisikan extensionProviders bagi Istio ext_authz (OPA)
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio
+  namespace: istio-system
+data:
+  mesh: |
+    extensionProviders:
+      - name: opa-ext-authz
+        envoyExtAuthzHttp:
+          service: opa-service.zta-research.svc.cluster.local
+          port: 8181
+          pathPrefix: /v1/data/authz_allow
+          includeRequestHeadersInCheck:
+            - "x-forwarded-client-cert"
+            - "x-source-identity"
+            - "x-zta-cache-verified"
+            - ":authority"
+            - ":method"
+            - ":path"
+            - "host"
+          failureModeAllow: false

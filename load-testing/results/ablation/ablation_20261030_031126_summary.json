@@ -1,0 +1,10 @@
+{
+  "experiment_id": "ablation_20261030_031126",
+  "timestamp": "20261030_031126",
+  "repetitions": 5,
+  "scenario": "load-testing/scenarios/s-ablation-multihop-contention.js",
+  "results": {
+    "lfu": [],
+    "graph": []
+  }
+}

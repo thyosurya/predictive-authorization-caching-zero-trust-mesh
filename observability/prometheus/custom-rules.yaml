@@ -1,0 +1,65 @@
+# Prometheus recording rules untuk ZTA Research
+# Digunakan untuk pre-compute metrics yang sering di-query
+
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: zta-research-rules
+  namespace: zta-research
+  labels:
+    prometheus: k8s
+spec:
+  groups:
+    - name: zta_cache_rules
+      interval: 10s
+      rules:
+        # Cache hit ratio (1m window)
+        - record: zta:cache_hit_ratio:1m
+          expr: |
+            sum(rate(zta_cache_hits_total[1m]))
+            / (sum(rate(zta_cache_hits_total[1m])) + sum(rate(zta_cache_misses_total[1m])))
+
+        # p99 revocation latency (5m window)
+        - record: zta:revocation_latency_p99:5m
+          expr: |
+            histogram_quantile(0.99, rate(zta_revocation_latency_ms_bucket[5m]))
+
+        # Token TTL distribution p50 (5m window)
+        - record: zta:token_ttl_p50:5m
+          expr: |
+            histogram_quantile(0.5, rate(zta_token_ttl_ms_bucket[5m]))
+
+        # Graph analysis duration p95
+        - record: zta:graph_analysis_duration_p95:5m
+          expr: |
+            histogram_quantile(0.95, rate(zta_graph_analysis_duration_ms_bucket[5m]))
+
+        # Total active tokens
+        - record: zta:tokens_active
+          expr: zta_tokens_active
+
+        # Active gRPC streams (sidecar connections)
+        - record: zta:grpc_streams
+          expr: zta_grpc_stream_count
+
+    - name: zta_alert_rules
+      rules:
+        # Alert: cache hit ratio terlalu rendah
+        - alert: ZTACacheHitRatioLow
+          expr: zta:cache_hit_ratio:1m < 0.5
+          for: 2m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Cache hit ratio below 50%"
+            description: "Cache hit ratio is {{ $value | humanizePercentage }} for the last 2 minutes."
+
+        # Alert: revocation latency terlalu tinggi
+        - alert: ZTARevocationLatencyHigh
+          expr: zta:revocation_latency_p99:5m > 200
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Revocation p99 latency exceeds 200ms"
+            description: "Current p99 revocation latency: {{ $value }}ms"

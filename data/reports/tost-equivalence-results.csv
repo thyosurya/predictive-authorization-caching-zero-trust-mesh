@@ -1,0 +1,6 @@
+comparison,margin_ms,hodges_lehmann,p_lower,p_upper,p_tost,equivalent,alpha,non_inferior_p,non_inferior
+PBS@500RPS vs ZTA-Naif@500RPS,14.7923,-10.4765,0.380914,0.129026,0.380914,False,0.05,0.380914,False
+ZTA-Naif@500RPS vs ZTA-Cache@500RPS,14.7923,16.6277,0.07266,0.520634,0.520634,False,0.05,0.07266,False
+ZTA-Naif@2000RPS vs ZTA-Cache@2000RPS,111.3661,-17.6733,0.108508,0.02506,0.108508,False,0.05,0.108508,False
+PBS@500RPS vs ZTA-Cache@500RPS,14.7923,5.7909,0.166427,0.299845,0.299845,False,0.05,0.166427,False
+Static TTL (S10) vs Graph-aware (S07),296.3968,-40.6684,0.210193,0.09045,0.210193,False,0.05,,

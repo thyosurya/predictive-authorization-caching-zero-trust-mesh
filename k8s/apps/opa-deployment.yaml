@@ -1,0 +1,235 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: opa
+  namespace: zta-research
+  labels:
+    app: opa
+    component: pdp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: opa
+  template:
+    metadata:
+      labels:
+        app: opa
+        component: pdp
+    spec:
+      containers:
+      - name: opa
+        image: openpolicyagent/opa:0.60.0
+        ports:
+        - name: http
+          containerPort: 8181
+        args:
+        - "run"
+        - "--server"
+        - "--addr=0.0.0.0:8181"
+        - "--log-level=info"
+        - "--log-format=json"
+        - "--set=decision_logs.console=true"
+        - "/policies/authz.rego"
+        - "/policies/authz_allow.rego"
+        - "/policies/authz_health.rego"
+        - "/policies/data.json"
+        volumeMounts:
+        - name: policy-volume
+          mountPath: /policies
+          readOnly: true
+        resources:
+          requests:
+            cpu: 50m
+            memory: 64Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 5
+          failureThreshold: 6
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 6
+      volumes:
+      - name: policy-volume
+        configMap:
+          name: opa-policies
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa-service
+  namespace: zta-research
+  labels:
+    app: opa
+spec:
+  ports:
+  - name: http
+    port: 8181
+    targetPort: 8181
+  selector:
+    app: opa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: opa
+  namespace: zta-research
+  labels:
+    app: opa
+spec:
+  ports:
+  - name: http
+    port: 8181
+    targetPort: 8181
+  selector:
+    app: opa
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: opa-policies
+  namespace: zta-research
+data:
+  authz.rego: |
+    package authz
+    import future.keywords.if
+    import future.keywords.in
+    default allow := false
+
+    # 1. Bypass jika sudah diverifikasi oleh WASM Cache
+    allow if {
+        input.attributes.request.http.headers["x-zta-cache-verified"] == "true"
+    }
+
+    allow if {
+        input.headers["x-zta-cache-verified"] == "true"
+    }
+
+    # 2. Evaluasi langsung (misalnya dipanggil oleh Cache Distributor)
+    allow if {
+        some rule in data.service_rules
+        rule.source == input.source_identity
+        rule.target == input.target_identity
+        input.action in rule.allowed_actions
+    }
+
+    # 3. Evaluasi dari Istio Envoy ext_authz (input.attributes.request.http)
+    effective_source := src if {
+        raw := input.attributes.request.http.headers["x-source-identity"]
+        raw != ""
+        src := raw
+    } else := src if {
+        cert := input.attributes.request.http.headers["x-forwarded-client-cert"]
+        cert != ""
+        contains(cert, "URI=spiffe://")
+        parts := split(cert, "URI=")
+        uri_part := split(parts[1], ";")[0]
+        src := uri_part
+    } else := "spiffe://cluster.local/ns/zta-research/sa/frontend" if {
+        true
+    }
+
+    effective_target := tgt if {
+        authority := input.attributes.request.http.headers[":authority"]
+        authority != ""
+        host_clean := split(split(authority, ":")[0], ".")[0]
+        tgt := concat("", ["spiffe://cluster.local/ns/zta-research/sa/", host_clean])
+    } else := tgt if {
+        host := input.attributes.request.http.headers["host"]
+        host != ""
+        host_clean := split(split(host, ":")[0], ".")[0]
+        tgt := concat("", ["spiffe://cluster.local/ns/zta-research/sa/", host_clean])
+    } else := "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice" if {
+        true
+    }
+
+    effective_action := act if {
+        act := input.attributes.request.http.method
+    } else := "GET"
+
+    allow if {
+        some rule in data.service_rules
+        rule.source == effective_source
+        rule.target == effective_target
+        effective_action in rule.allowed_actions
+    }
+
+    sensitivity := level if {
+        some rule in data.service_rules
+        rule.source == input.source_identity
+        rule.target == input.target_identity
+        level := rule.sensitivity
+    }
+    default sensitivity := "medium"
+  authz_allow.rego: |
+    package authz_allow.api
+    import future.keywords.if
+    import future.keywords.in
+    default products := false
+    default cart := false
+
+    products if {
+        input.attributes.request.http.headers["x-zta-cache-verified"] == "true"
+    }
+    products if {
+        input.headers["x-zta-cache-verified"] == "true"
+    }
+    products if {
+        some rule in data.service_rules
+        rule.source == "spiffe://cluster.local/ns/zta-research/sa/frontend"
+        rule.target == "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice"
+        "GET" in rule.allowed_actions
+    }
+
+    cart if {
+        input.attributes.request.http.headers["x-zta-cache-verified"] == "true"
+    }
+    cart if {
+        input.headers["x-zta-cache-verified"] == "true"
+    }
+    cart if {
+        some rule in data.service_rules
+        rule.source == "spiffe://cluster.local/ns/zta-research/sa/frontend"
+        rule.target == "spiffe://cluster.local/ns/zta-research/sa/cartservice"
+        "POST" in rule.allowed_actions
+    }
+  authz_health.rego: |
+    package authz_allow
+    import future.keywords.if
+    default health := true
+    health if true
+  data.json: |
+    {
+      "service_rules": [
+        {
+          "source": "spiffe://cluster.local/ns/zta-research/sa/frontend",
+          "target": "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice",
+          "allowed_actions": ["GET"],
+          "sensitivity": "low"
+        },
+        {
+          "source": "spiffe://cluster.local/ns/zta-research/sa/frontend",
+          "target": "spiffe://cluster.local/ns/zta-research/sa/cartservice",
+          "allowed_actions": ["GET", "POST", "DELETE"],
+          "sensitivity": "medium"
+        },
+        {
+          "source": "spiffe://cluster.local/ns/zta-research/sa/checkoutservice",
+          "target": "spiffe://cluster.local/ns/zta-research/sa/paymentservice",
+          "allowed_actions": ["POST"],
+          "sensitivity": "high"
+        }
+      ]
+    }

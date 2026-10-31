@@ -1,0 +1,33 @@
+# k8s/istio/wasm-filter.yaml
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: authz-cache-filter-productcatalog
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: productcatalogservice
+  url: file:///etc/wasm/authz-cache.wasm
+  phase: AUTHZ
+  pluginConfig:
+    pdp_endpoint: "http://opa-service:8181/v1/data/authz/allow"
+    enable_benchmark_mode: true
+    max_entries: 2
+---
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: authz-cache-filter-cart
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: cartservice
+  url: file:///etc/wasm/authz-cache.wasm
+  phase: AUTHZ
+  pluginConfig:
+    pdp_endpoint: "http://opa-service:8181/v1/data/authz/allow"
+    enable_benchmark_mode: true
+    max_entries: 2
+

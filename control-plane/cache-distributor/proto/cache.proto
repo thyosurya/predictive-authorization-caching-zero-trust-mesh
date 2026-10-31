@@ -1,0 +1,40 @@
+// control-plane/cache-distributor/proto/cache.proto
+syntax = "proto3";
+package cache;
+option go_package = "./proto";
+
+service CacheDistributor {
+  // PushToken mengirim delegation token ke sidecar
+  rpc PushToken(TokenPayload) returns (Ack);
+  // RevokeToken mencabut token dan invalidasi nonce
+  rpc RevokeToken(RevocationRequest) returns (Ack);
+  // StreamRevocations stream revokasi ke sidecar secara real-time
+  rpc StreamRevocations(SubscribeRequest) returns (stream RevocationEvent);
+}
+
+message TokenPayload {
+  string token_json = 1;
+  string signature  = 2;
+}
+
+message RevocationRequest {
+  string source_identity = 1;
+  string target_identity = 2;
+  string old_nonce       = 3;
+}
+
+message RevocationEvent {
+  string source_identity = 1;
+  string target_identity = 2;
+  string new_nonce       = 3;
+  int64  timestamp       = 4;
+}
+
+message SubscribeRequest {
+  string sidecar_id = 1;
+}
+
+message Ack {
+  bool   success = 1;
+  string message = 2;
+}

@@ -1,0 +1,14 @@
+{
+  "products": {
+    "calls": 85,
+    "centrality": 1.0
+  },
+  "cart": {
+    "calls": 60,
+    "centrality": 1.0
+  },
+  "health": {
+    "calls": 30,
+    "centrality": 0.3
+  }
+}

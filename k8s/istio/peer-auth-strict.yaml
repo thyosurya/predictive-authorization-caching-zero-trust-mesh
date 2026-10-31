@@ -1,0 +1,56 @@
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: default
+  namespace: zta-research
+spec:
+  mtls:
+    mode: STRICT
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: frontend-peer-auth
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  mtls:
+    mode: PERMISSIVE
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: productcatalogservice-peer-auth
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: productcatalogservice
+  mtls:
+    mode: PERMISSIVE
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: cartservice-peer-auth
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: cartservice
+  mtls:
+    mode: PERMISSIVE
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: cache-distributor-peer-auth
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: cache-distributor
+  mtls:
+    mode: PERMISSIVE

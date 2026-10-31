@@ -1,0 +1,17 @@
+\begin{table*}[t]
+\centering
+\small
+\caption{Ablation Study Results: Graph-Aware vs. Frequency-Only (LFU) Under Cache Contention ($K_{\text{local}} = 2$)}
+\label{tab:ablation-graph-vs-lfu}
+\begin{tabular}{lcccccccc}
+\hline
+\textbf{Latency Metric} & \textbf{LFU Med.} & \textbf{Graph Med.} & \textbf{Red.} & \textbf{Mann-Whitney $U$} & \textbf{$p$-value} & \textbf{Cliff's $\delta$} & \textbf{Effect Size} & \textbf{95\% CI Diff (ms)} \\
+ & \textbf{(ms)} & \textbf{(ms)} & \textbf{(\%)} & & \textbf{(1-sided)} & & \textbf{(Romano)} & \\
+\hline
+Multi-Hop Latency (Hop-2) [ms] & 1677.12 & 1569.14 & 6.4\% & 8.0 & 0.2103 & +0.360 & Medium & [-354.68, 351.34] \\
+End-to-End Latency p99 [ms] & 1371.50 & 1310.45 & 4.5\% & 8.0 & 0.2103 & +0.360 & Medium & [-231.38, 216.81] \\
+End-to-End Latency Median [ms] & 367.03 & 375.01 & -2.2\% & 16.0 & 0.7897 & -0.280 & Small & [-13.79, 31.98] \\
+Direct Latency p99 [ms] & 927.83 & 905.05 & 2.5\% & 8.0 & 0.2103 & +0.360 & Medium & [-273.00, 174.85] \\
+\hline
+\end{tabular}
+\end{table*}

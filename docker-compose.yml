@@ -1,0 +1,236 @@
+# docker-compose.yml
+# Local development environment untuk ZTA Predictive Authorization Caching
+# Jalankan: docker compose up -d
+# Tidak membutuhkan Kubernetes/Istio - cocok untuk development sehari-hari
+
+version: "3.9"
+
+networks:
+  zta-local:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+
+volumes:
+  prometheus-data:
+  grafana-data:
+  spire-data:
+
+services:
+
+  # ──────────────────────────────────────────────
+  # PDP - Open Policy Agent
+  # ──────────────────────────────────────────────
+  opa:
+    image: openpolicyagent/opa:0.60.0
+    container_name: zta-opa
+    command:
+      - run
+      - --server
+      - --log-level=info
+      - --log-format=json
+      - /policies/authz.rego
+      - /policies/data.json
+    ports:
+      - "8181:8181"
+    volumes:
+      - ./control-plane/pdp/policies:/policies:ro
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.10
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8181/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Graph Topology Analyzer
+  # ──────────────────────────────────────────────
+  graph-analyzer:
+    build:
+      context: ./control-plane/graph-analyzer
+      dockerfile: Dockerfile
+    container_name: zta-graph-analyzer
+    environment:
+      ADMIN_TOKEN: "localdev-admin-token"
+      MIN_CALLS_PER_MIN: "5"          # lebih rendah untuk dev (bukan 10)
+      ANALYSIS_INTERVAL_S: "10"       # lebih cepat untuk dev (bukan 30)
+      MAX_EDGES: "200"
+      PORT: "8080"
+      LOG_LEVEL: "debug"
+    ports:
+      - "8080:8080"
+      - "2112:2112"   # metrics
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.11
+    depends_on:
+      opa:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Cache Distributor
+  # ──────────────────────────────────────────────
+  cache-distributor:
+    build:
+      context: ./control-plane/cache-distributor
+      dockerfile: Dockerfile
+    container_name: zta-cache-distributor
+    environment:
+      # SIGNING_KEY: 32-byte base64 untuk local dev (JANGAN pakai di production)
+      SIGNING_KEY: "bG9jYWxkZXYtc2lnbmluZy1rZXktMzJieXRlcw=="
+      GRAPH_ANALYZER_URL: "http://graph-analyzer:8080"
+      OPA_URL: "http://opa:8181"
+      GRPC_PORT: "50051"
+      REST_PORT: "8081"
+      DISTRIBUTION_INTERVAL_S: "15"   # lebih cepat untuk dev
+      LOG_LEVEL: "debug"
+    ports:
+      - "8081:8081"
+      - "50051:50051"
+      - "2113:2112"   # metrics (mapped to 2113 to avoid port conflict)
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.12
+    depends_on:
+      graph-analyzer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8081/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Service Testbed (A, B, C)
+  # ──────────────────────────────────────────────
+  service-a:
+    build:
+      context: ./services/service-a
+      dockerfile: Dockerfile
+    container_name: zta-service-a
+    environment:
+      SERVICE_NAME: "service-a"
+      PORT: "8080"
+      SIMULATED_LATENCY_MS: "0"
+    ports:
+      - "9001:8080"
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.20
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  service-b:
+    build:
+      context: ./services/service-b
+      dockerfile: Dockerfile
+    container_name: zta-service-b
+    environment:
+      SERVICE_NAME: "service-b"
+      PORT: "8080"
+      SIMULATED_LATENCY_MS: "0"
+    ports:
+      - "9002:8080"
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.21
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  service-c:
+    build:
+      context: ./services/service-c
+      dockerfile: Dockerfile
+    container_name: zta-service-c
+    environment:
+      SERVICE_NAME: "service-c"
+      PORT: "8080"
+      SIMULATED_LATENCY_MS: "0"
+    ports:
+      - "9003:8080"
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.22
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+
+  # ──────────────────────────────────────────────
+  # Observabilitas
+  # ──────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.48.1
+    container_name: zta-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./observability/prometheus/prometheus-local.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/custom-rules.yaml:/etc/prometheus/custom-rules.yaml:ro
+      - prometheus-data:/prometheus
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.30
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:10.2.3
+    container_name: zta-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: "ztaresearch"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: "/var/lib/grafana/dashboards/dashboard-zta-research.json"
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana:/var/lib/grafana/dashboards:ro
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.31
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52.0
+    container_name: zta-jaeger
+    environment:
+      COLLECTOR_ZIPKIN_HOST_PORT: "9411"
+      SPAN_STORAGE_TYPE: memory
+      MEMORY_MAX_TRACES: "50000"
+    ports:
+      - "16686:16686"   # UI
+      - "9411:9411"     # Zipkin collector
+      - "14268:14268"   # Jaeger collector HTTP
+    networks:
+      zta-local:
+        ipv4_address: 172.20.0.32
+    restart: unless-stopped

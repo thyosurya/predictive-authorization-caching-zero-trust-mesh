@@ -1,0 +1,9 @@
+# requirements.txt
+# Python dependencies untuk scripts analisis data
+# Install: pip install -r requirements.txt
+
+pandas>=2.0.0
+numpy>=1.24.0
+scipy>=1.11.0
+requests>=2.31.0
+matplotlib>=3.7.0

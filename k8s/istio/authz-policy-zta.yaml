@@ -1,0 +1,38 @@
+# k8s/istio/authz-policy-zta.yaml
+# AuthorizationPolicy untuk ZTA - mengarahkan request ke ext_authz (OPA)
+# Digunakan oleh config-zta-naive DAN config-zta-cache
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: zta-ext-authz-productcatalog
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: productcatalogservice
+  action: CUSTOM
+  provider:
+    name: opa-ext-authz
+  rules:
+    - to:
+        - operation:
+            paths: ["/api/*"]
+            methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: zta-ext-authz-cart
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: cartservice
+  action: CUSTOM
+  provider:
+    name: opa-ext-authz
+  rules:
+    - to:
+        - operation:
+            paths: ["/api/*"]
+            methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]

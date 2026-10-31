@@ -1,0 +1,30 @@
+# k8s/cluster/network-policy-pbs.yaml
+# PBS Baseline: NetworkPolicy yang mengizinkan semua traffic intra-namespace
+# Digunakan saat konfigurasi PBS (tanpa otorisasi per-call)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: pbs-allow-all-intra-namespace
+  namespace: zta-research
+  labels:
+    config: pbs
+    experiment: zta-research
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+    - Egress
+  ingress:
+    - from:
+        - podSelector: {}
+  egress:
+    - to:
+        - podSelector: {}
+    # Izinkan DNS resolution
+    - to:
+        - namespaceSelector: {}
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53

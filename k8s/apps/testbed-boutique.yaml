@@ -1,0 +1,182 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: frontend
+  namespace: zta-research
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: zta-research
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      serviceAccountName: frontend
+      containers:
+        - name: service-a
+          image: thyosurya/frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: "frontend"
+            - name: PORT
+              value: "8080"
+            - name: PRODUCT_CATALOG_URL
+              value: "http://productcatalogservice.zta-research.svc.cluster.local:8080"
+            - name: CART_SERVICE_URL
+              value: "http://cartservice.zta-research.svc.cluster.local:8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: zta-research
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: http-alt
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: frontend
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: productcatalogservice
+  namespace: zta-research
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productcatalogservice
+  namespace: zta-research
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: productcatalogservice
+  template:
+    metadata:
+      labels:
+        app: productcatalogservice
+      annotations:
+        sidecar.istio.io/userVolume: '[{"name":"wasm-filter","configMap":{"name":"wasm-filter"}}]'
+        sidecar.istio.io/userVolumeMount: '[{"name":"wasm-filter","mountPath":"/etc/wasm","readOnly":true}]'
+    spec:
+      serviceAccountName: productcatalogservice
+      containers:
+        - name: service-b
+          image: thyosurya/productcatalogservice:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: "productcatalogservice"
+            - name: PORT
+              value: "8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productcatalogservice
+  namespace: zta-research
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: http-alt
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: productcatalogservice
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cartservice
+  namespace: zta-research
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cartservice
+  namespace: zta-research
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cartservice
+  template:
+    metadata:
+      labels:
+        app: cartservice
+      annotations:
+        sidecar.istio.io/userVolume: '[{"name":"wasm-filter","configMap":{"name":"wasm-filter"}}]'
+        sidecar.istio.io/userVolumeMount: '[{"name":"wasm-filter","mountPath":"/etc/wasm","readOnly":true}]'
+    spec:
+      serviceAccountName: cartservice
+      containers:
+        - name: service-c
+          image: thyosurya/cartservice:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SERVICE_NAME
+              value: "cartservice"
+            - name: PORT
+              value: "8080"
+            - name: PRODUCT_CATALOG_URL
+              value: "http://productcatalogservice.zta-research.svc.cluster.local:8080"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 1000m
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cartservice
+  namespace: zta-research
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080
+    - name: http-alt
+      port: 8080
+      targetPort: 8080
+  selector:
+    app: cartservice

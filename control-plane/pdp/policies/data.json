@@ -1,0 +1,22 @@
+{
+  "service_rules": [
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/frontend",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice",
+      "allowed_actions": ["GET"],
+      "sensitivity": "low"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/frontend",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/cartservice",
+      "allowed_actions": ["GET", "POST", "DELETE"],
+      "sensitivity": "medium"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/checkoutservice",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/paymentservice",
+      "allowed_actions": ["POST"],
+      "sensitivity": "high"
+    }
+  ]
+}

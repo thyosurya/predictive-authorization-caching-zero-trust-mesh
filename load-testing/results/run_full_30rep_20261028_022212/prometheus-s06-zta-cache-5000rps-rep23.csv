@@ -1,0 +1,1 @@
+timestamp,p50_latency_ms,p90_latency_ms,p99_latency_ms,throughput_rps,error_rate_pct,cpu_avg_pct,mem_avg_mb,cache_hit_ratio,revocation_latency_p99_ms
