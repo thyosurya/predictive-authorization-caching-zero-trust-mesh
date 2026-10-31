@@ -1,5 +1,5 @@
 # Metodologi Penelitian dan Formalisme Matematis (Research Methodology & Mathematical Formalism)
-## ZTA Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh
+## Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh
 
 Dokumen ini mendokumentasikan secara resmi spesifikasi metodologi penelitian kuantitatif, arsitektur sistem data plane/control plane, algoritma penentuan TTL adaptif, desain skenario eksperimen, formalisme matematis, dan protokol uji statistik inferensial yang menjadi tumpuan utama (Bab 3) naskah publikasi untuk jurnal bereputasi tinggi (IEEE TDSC / ACM TOPS).
 

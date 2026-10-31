@@ -109,7 +109,7 @@ def main():
     manifest = {
         "manifest_version": "1.0.0",
         "generated_at": datetime.now().isoformat(),
-        "title": "Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh",
+        "title": "Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh",
         "authors": [
             {
                 "name": "Moh. Radithyo Surya Martuah",

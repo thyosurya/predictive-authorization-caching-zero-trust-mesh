@@ -1,5 +1,5 @@
 # Notasi, Persamaan Matematika, dan Validasi Statistik
-## ZTA Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh
+## Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh
 
 Dokumen ini menyajikan formalisasi matematis lengkap, notasi algoritmik, model kompleksitas asimtotik, serta hasil validasi statistik inferensial untuk arsitektur *Zero Trust Predictive Authorization Caching*. Seluruh formula diturunkan langsung dari implementasi basis kode (*codebase*) dan divalidasi terhadap dataset eksperimen produksi kanonikal (`data/processed/`, 600 berkas mentah k6 dan Prometheus pada 30 repetisi independen per skenario, serta studi ablasi multi-hop $n = 5$ pada testbed klaster Kubernetes terisolasi) tanpa rekayasa numerik (*zero hallucination*).
 

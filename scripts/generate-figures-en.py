@@ -4,7 +4,7 @@ generate-figures-en.py: Statistical Visualizations for the English Manuscript
 =============================================================================
 
 Generates all 10 figures (PNG) in English for the paper
-"Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh".
+"Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh".
 
 Principles:
 - All statistical metrics (p-values, Cliff's delta, sample sizes) are dynamically

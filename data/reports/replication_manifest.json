@@ -1,7 +1,7 @@
 {
   "manifest_version": "1.0.0",
   "generated_at": "2026-10-30T16:47:25.036183",
-  "title": "Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh",
+  "title": "Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh",
   "authors": [
     {
       "name": "Moh. Radithyo Surya Martuah",
