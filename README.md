@@ -1,4 +1,4 @@
-# Replication Package: Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh
+# Replication Package: Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh
 
 [![Artifact Evaluation](https://img.shields.io/badge/Artifact-Available%20%26%20Reproducible-success.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
@@ -8,7 +8,7 @@
 
 Official, standalone **Replication Package & Artifact Evaluation Suite** for the academic paper:
 
-> **"Predictive Authorization Caching with Microservice Graph Prioritization in Service Mesh"**  
+> **"Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh"**  
 > *Moh. Radithyo Surya Martuah (Universitas Negeri Gorontalo)*
 
 This repository contains the complete experimental testbed, WebAssembly filter source code, Go control-plane microservices, raw benchmark datasets (600+ test runs), data processing pipelines, inferential statistical test engines, and automated figure generators.
