@@ -48,15 +48,26 @@ def format_inline_markdown(line: str) -> str:
         tokens.append(val)
         return f"@@TOK{idx}@@"
 
-    # 1. Protect inline math $...$
+    # 1. Protect inline math $...$ (keep full math notation, allow wrap at ';\ ' and ',\ ')
     def repl_math(m):
-        return save_token(m.group(0))
+        raw = m.group(0)
+        raw = raw.replace(r";\ ", r";\allowbreak\ ")
+        raw = raw.replace(r",\ ", r",\allowbreak\ ")
+        return save_token(raw)
 
     line = re.sub(r"\$(?!\$)(.+?)\$", repl_math, line)
 
-    # 2. Protect inline code `...`
+    # 2. Protect inline code `...` (allow line-breaking inside long monospace strings)
     def repl_code(m):
         inner = escape_latex_text(m.group(1))
+        inner = inner.replace(r"\_", r"\_\allowbreak{}")
+        inner = inner.replace("/", r"/\allowbreak{}")
+        inner = inner.replace("(", r"(\allowbreak{}")
+        inner = inner.replace(r"\{", r"\{\allowbreak{}")
+        inner = inner.replace("=", r"=\allowbreak{}")
+        inner = inner.replace(":", r":\allowbreak{}")
+        inner = inner.replace(",", r",\allowbreak{}")
+        inner = inner.replace("-", r"-\allowbreak{}")
         return save_token(f"\\texttt{{{inner}}}")
 
     line = re.sub(r"`([^`]+)`", repl_code, line)
@@ -364,9 +375,14 @@ def convert_markdown_to_latex(md_path: Path, is_english: bool = False) -> str:
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{array}
-\usepackage{url}
-\usepackage[hidelinks]{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+\usepackage[hyphens]{url}
+\usepackage[hidelinks,breaklinks=true]{hyperref}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{}
 \usepackage{microtype}
+
+\emergencystretch=3em
+\sloppy
 
 \newsavebox{\tablebox}
 \newcommand{\fittable}[1]{%
@@ -379,6 +395,9 @@ def convert_markdown_to_latex(md_path: Path, is_english: bool = False) -> str:
 }
 
 \begin{document}
+% Force URL break points AFTER \begin{document} so IEEEtran's \AtBeginDocument{\urlstyle{same}} does not reset \UrlBreaks
+\Urlmuskip=0mu plus 2mu\relax
+\expandafter\def\expandafter\UrlBreaks\expandafter{\UrlBreaks\do\-\do\_\do\/\do\.\do\a\do\b\do\c\do\d\do\e\do\f\do\g\do\h\do\i\do\j\do\k\do\l\do\m\do\n\do\o\do\p\do\q\do\r\do\s\do\t\do\u\do\v\do\w\do\x\do\y\do\z}
 """
     title_block = f"""\\title{{{title}}}
 
