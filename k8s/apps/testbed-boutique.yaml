@@ -18,6 +18,9 @@ spec:
     metadata:
       labels:
         app: frontend
+      annotations:
+        sidecar.istio.io/userVolume: '[{"name":"wasm-filter","configMap":{"name":"wasm-filter"}}]'
+        sidecar.istio.io/userVolumeMount: '[{"name":"wasm-filter","mountPath":"/etc/wasm","readOnly":true}]'
     spec:
       serviceAccountName: frontend
       containers:

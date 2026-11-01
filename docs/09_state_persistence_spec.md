@@ -48,7 +48,7 @@ Seluruh state pada Graph Analyzer dan Cache Distributor **sengaja disimpan in-me
 | State | Tipe | Ukuran estimasi | Hilang saat restart? | Dampak |
 |---|---|---|---|---|
 | `RevocationManager.active` | `map[string]*NonceEntry` | ~100 entry × 150 byte = ~15 KB | **Ya** | Sidecar kehilangan referensi nonce - fallback ke PDP |
-| `RevocationManager.blacklist` | `map[string]time.Time` | ~200 entry × 50 byte = ~10 KB | **Ya** | Nonce lama tidak lagi di-blacklist - window kecil vulnerability (< MaxTTL = 60 detik) |
+| `RevocationManager.blacklist` | `map[string]time.Time` | ~200 entry × 50 byte = ~10 KB | **Ya** | Nonce lama tidak lagi di-blacklist - window kecil vulnerability (< MaxTTL = 30 detik) |
 | `Broadcaster.clients` | `map[string]*StreamClient` | ~10 entry | **Ya** | Sidecar reconnect otomatis dalam < 5 detik |
 | Token inventory (untuk /tokens/active) | `map[string]*ActiveTokenSummary` | ~100 entry × 300 byte = ~30 KB | **Ya** | Endpoint monitoring menunjukkan 0 sementara |
 

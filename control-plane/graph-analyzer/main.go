@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/subtle"
 	"encoding/json"
 	"fmt"
@@ -23,14 +24,15 @@ type AnalyzerService struct {
 	selector   *cache.CandidateSelector
 	metrics    *metrics.Collector
 	adminToken string
+	opaURL     string
 }
 
 // RecordRequest adalah payload POST /record
 type RecordRequest struct {
 	Source    string `json:"source"`
-	Target   string `json:"target"`
-	Method   string `json:"method"`
-	Timestamp int64 `json:"timestamp"`
+	Target    string `json:"target"`
+	Method    string `json:"method"`
+	Timestamp int64  `json:"timestamp"`
 }
 
 // CacheCandidateResponse adalah response GET /candidates
@@ -66,6 +68,7 @@ func main() {
 	if adminToken == "" {
 		log.Fatal("ADMIN_TOKEN environment variable is required (no default credential)")
 	}
+	opaURL := envOrDefault("OPA_URL", "")
 	minCallsPerMin := envIntOrDefault("MIN_CALLS_PER_MIN", 10)
 	maxCandidates := envIntOrDefault("MAX_CANDIDATES", 50)
 	analysisInterval := envIntOrDefault("ANALYSIS_INTERVAL_S", 30)
@@ -86,6 +89,7 @@ func main() {
 		selector:   selector,
 		metrics:    metrics.NewCollector(),
 		adminToken: adminToken,
+		opaURL:     opaURL,
 	}
 	log.Printf("Graph Analyzer initialized with mode: %s, max candidates: %d", prioritizationMode, maxCandidates)
 
@@ -171,6 +175,63 @@ func (svc *AnalyzerService) handleRecordCall(w http.ResponseWriter, r *http.Requ
 	json.NewEncoder(w).Encode(map[string]bool{"recorded": true})
 }
 
+// queryOPAPolicy mengambil allowed_actions dan sensitivity dari OPA data.service_rules,
+// dengan fallback deterministik berbasis klasifikasi risiko layanan jika OPA tidak dikonfigurasi.
+func (svc *AnalyzerService) queryOPAPolicy(source, target string) ([]string, cache.SensitivityLevel) {
+	if svc.opaURL != "" {
+		client := &http.Client{Timeout: 2 * time.Second}
+		reqBody, _ := json.Marshal(map[string]interface{}{
+			"input": map[string]string{
+				"source_identity": source,
+				"target_identity": target,
+			},
+		})
+		resp, err := client.Post(svc.opaURL+"/v1/data/service_rules", "application/json", bytes.NewReader(reqBody))
+		if err == nil {
+			defer resp.Body.Close()
+			if resp.StatusCode == http.StatusOK {
+				var result struct {
+					Result []struct {
+						Source         string   `json:"source"`
+						Target         string   `json:"target"`
+						SourceIdentity string   `json:"source_identity"`
+						TargetIdentity string   `json:"target_identity"`
+						AllowedActions []string `json:"allowed_actions"`
+						Sensitivity    string   `json:"sensitivity"`
+					} `json:"result"`
+				}
+				if err := json.NewDecoder(resp.Body).Decode(&result); err == nil {
+					for _, rule := range result.Result {
+						rSrc := rule.Source
+						if rSrc == "" {
+							rSrc = rule.SourceIdentity
+						}
+						rTgt := rule.Target
+						if rTgt == "" {
+							rTgt = rule.TargetIdentity
+						}
+						if (rSrc == source || rSrc == "*") && (rTgt == target || rTgt == "*") && len(rule.AllowedActions) > 0 {
+							return rule.AllowedActions, cache.SensitivityFromString(rule.Sensitivity)
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Fallback deterministik sesuai klasifikasi data.json Online Boutique (Bab 3.3):
+	switch {
+	case strings.HasSuffix(target, "/productcatalogservice") || strings.HasSuffix(target, "/currencyservice"):
+		return []string{"GET", "POST"}, cache.SensitivityLow
+	case strings.HasSuffix(target, "/paymentservice"):
+		return []string{"POST"}, cache.SensitivityHigh
+	case strings.HasSuffix(target, "/cartservice"):
+		return []string{"GET", "POST", "DELETE"}, cache.SensitivityMedium
+	default:
+		return []string{"GET", "POST", "PUT", "DELETE"}, cache.SensitivityMedium
+	}
+}
+
 // GET /candidates - mengembalikan daftar kandidat cache [butuh X-Admin-Token]
 func (svc *AnalyzerService) handleGetCandidates(w http.ResponseWriter, r *http.Request) {
 	if !svc.verifyAdminToken(r) {
@@ -180,9 +241,9 @@ func (svc *AnalyzerService) handleGetCandidates(w http.ResponseWriter, r *http.R
 
 	centrality := graph.ComputeBetweenness(svc.topology)
 
-	// Default policyFn - return semua action dengan sensitivity medium
+	// Default policyFn - query OPA data.service_rules dengan fallback deterministik
 	policyFn := func(source, target string) ([]string, cache.SensitivityLevel) {
-		return []string{"GET", "POST", "PUT", "DELETE"}, cache.SensitivityMedium
+		return svc.queryOPAPolicy(source, target)
 	}
 
 	candidates := svc.selector.Select(svc.topology, centrality, policyFn)
@@ -232,9 +293,14 @@ func (svc *AnalyzerService) handleReset(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	edgesCleared := len(svc.topology.GetHighFrequencyPairs(0))
 	svc.topology.Reset()
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(map[string]bool{"reset": true})
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"reset":         true,
+		"edges_cleared": edgesCleared,
+	})
 }
 
 // GET /health - health check

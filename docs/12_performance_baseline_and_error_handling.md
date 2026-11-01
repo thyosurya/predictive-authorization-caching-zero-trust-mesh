@@ -34,7 +34,7 @@ kubectl exec -n zta-research <pod-name> -c istio-proxy -- \
 
 ### A.3 Angka Baseline (Diukur pada Testbed Eksperimen)
 
-**Spesifikasi hardware:** 4 vCPU Intel Xeon E5-2680v4, 8 GB DDR4, k3s v1.28.5
+**Spesifikasi hardware:** Testbed empiris utama menggunakan Single-Node VM Lean (2 vCPU AMD EPYC 7713, 4 GB DDR4, Debian 12, k3s v1.28.5+k3s1; Tabel 5 naskah mencatat rata-rata namespace ~11,15%–13,16% CPU dan ~257,62–290,01 MB RAM). Profil mikrobenchmark komponen idle per-container di bawah ini diukur pada node referensi (4 vCPU Intel Xeon E5-2680v4, 8 GB DDR4, k3s v1.28.5):
 
 #### Envoy Sidecar (istio-proxy)
 

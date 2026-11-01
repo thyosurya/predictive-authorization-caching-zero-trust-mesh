@@ -56,10 +56,13 @@ services:
     container_name: zta-graph-analyzer
     environment:
       ADMIN_TOKEN: "localdev-admin-token"
+      OPA_URL: "http://opa:8181"
       MIN_CALLS_PER_MIN: "5"          # lebih rendah untuk dev (bukan 10)
       ANALYSIS_INTERVAL_S: "10"       # lebih cepat untuk dev (bukan 30)
       MAX_EDGES: "200"
+      MAX_CANDIDATES: "50"
       PORT: "8080"
+      METRICS_PORT: "2112"
       LOG_LEVEL: "debug"
     ports:
       - "8080:8080"
@@ -86,12 +89,14 @@ services:
       dockerfile: Dockerfile
     container_name: zta-cache-distributor
     environment:
+      ADMIN_TOKEN: "localdev-admin-token"
       # SIGNING_KEY: 32-byte base64 untuk local dev (JANGAN pakai di production)
       SIGNING_KEY: "bG9jYWxkZXYtc2lnbmluZy1rZXktMzJieXRlcw=="
       GRAPH_ANALYZER_URL: "http://graph-analyzer:8080"
       OPA_URL: "http://opa:8181"
       GRPC_PORT: "50051"
       REST_PORT: "8081"
+      METRICS_PORT: "2112"
       DISTRIBUTION_INTERVAL_S: "15"   # lebih cepat untuk dev
       LOG_LEVEL: "debug"
     ports:
@@ -123,6 +128,8 @@ services:
       SERVICE_NAME: "service-a"
       PORT: "8080"
       SIMULATED_LATENCY_MS: "0"
+      PRODUCT_CATALOG_URL: "http://service-b:8080"
+      CART_SERVICE_URL: "http://service-c:8080"
     ports:
       - "9001:8080"
     networks:
@@ -165,6 +172,7 @@ services:
       SERVICE_NAME: "service-c"
       PORT: "8080"
       SIMULATED_LATENCY_MS: "0"
+      PRODUCT_CATALOG_URL: "http://service-b:8080"
     ports:
       - "9003:8080"
     networks:

@@ -47,20 +47,22 @@ spec:
         - name: GRAPH_ANALYZER_URL
           value: "http://graph-analyzer:8080"
         - name: OPA_URL
-          value: "http://opa:8181"
+          value: "http://opa-service:8181"
         - name: GRPC_PORT
           value: "50051"
         - name: REST_PORT
           value: "8081"
+        - name: METRICS_PORT
+          value: "2112"
         - name: DISTRIBUTION_INTERVAL_S
           value: "30"
         resources:
           requests:
             cpu: 100m
-            memory: 128Mi
+            memory: 64Mi
           limits:
-            cpu: 500m
-            memory: 256Mi
+            cpu: 200m
+            memory: 128Mi
         livenessProbe:
           httpGet:
             path: /health

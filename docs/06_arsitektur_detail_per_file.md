@@ -262,8 +262,8 @@ func (g *TopologyGraph) PruneStale(olderThan time.Duration)
 func ComputeBetweenness(g *TopologyGraph) map[string]float64
 // Menghitung betweenness centrality semua node.
 // Return: map[SPIFFE_ID]skor (0.0–1.0, sudah dinormalisasi).
-// Menggunakan gonum/graph/network.Betweenness().
-// Kompleksitas: O(VE) - acceptable untuk graph kecil (< 50 service).
+// Menggunakan gonum/graph/path.DijkstraAllPaths() dan gonum/graph/network.BetweennessWeighted().
+// Kompleksitas: O(VE + V^2 log V) dengan Brandes berbobot (atau O(VE) tak-berbobot).
 
 func RankEdgesByImportance(g *TopologyGraph, centrality map[string]float64) []*ServiceEdge
 // Mengurutkan edge berdasarkan gabungan: CallCount + centrality sumber.
@@ -288,7 +288,7 @@ func RankEdgesByImportance(g *TopologyGraph, centrality map[string]float64) []*S
 ```go
 const (
     BaseTTL = 30 * time.Second
-    MaxTTL  = 60 * time.Second
+    MaxTTL  = 30 * time.Second
     MinTTL  = 5  * time.Second
 )
 

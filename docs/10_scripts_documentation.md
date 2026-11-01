@@ -20,8 +20,13 @@ Semua script ada di direktori `scripts/`. Dokumen ini menjelaskan setiap script:
 | `export-metrics.py` | Python | Setelah skenario - export Prometheus ke CSV |
 | `analyze-all-data.py` | Python | Pipeline gabungan: ingest JSON/CSV k6 & Prometheus + uji statistik |
 | `statistical-analysis.py` | Python | Analisis statistik mendalam & kalkulasi effect size |
-| `generate-figures.py` | Python | Pembuatan visualisasi grafik publikasi ilmiah |
-| *(Arsip di `dump/`)* | Shell/Py | `audit_code_consistency.py`, `deploy_to_vm.py`, `fetch_results_from_vm.py`, `run_mini_k6_suite.py`, `setup_vm_hosts.py`, `vm_runner.py`, `merge-k6-results.py`, `export-jaeger.py`, `export-cache-metrics.py`, `azure/*` |
+| `generate-figures.py` / `generate-figures-en.py` | Python | Pembuatan visualisasi grafik publikasi ilmiah (Gambar 1–10 + suplemen, ID & EN) |
+| `analyze_ablation_results.py` | Python | Analisis statistik inferensial studi ablasi multi-hop ($K_{\text{local}} = 2$) |
+| `generate_ablation_figure.py` | Python | Pembuatan grafik boxplot studi ablasi multi-hop (Gambar 10, ID & EN) |
+| `scalability-analysis.py` | Python | Analisis model kompleksitas algoritmik $O(1)$ data plane & $O(V^2)$ control plane |
+| `validate-data.py` | Python | Audit integritas 600 berkas data mentah k6 JSON & Prometheus CSV |
+| `verify_traceability.py` | Python | Verifikasi keterlacakan 119 klaim angka & rumus naskah terhadap CSV |
+| `verify_en_draft.py` | Python | Audit kesetaraan naskah Bahasa Indonesia vs Bahasa Inggris |
 
 ---
 
@@ -198,14 +203,15 @@ Untuk setiap repetisi 1..REPETITIONS:
 
 ---
 
-## 5. `reset-testbed.sh`
+## 5. `reset-light.sh` dan `reset-full.sh`
 
 **Tujuan:** Reset state testbed ke kondisi bersih. Mendukung dua mode: ringan (antar pengulangan) dan penuh (antar skenario).
 
 **Penggunaan:**
 ```bash
-bash scripts/reset-testbed.sh <mode>
-# mode: light | full
+bash scripts/reset-light.sh
+# atau
+bash scripts/reset-full.sh
 ```
 
 **Parameter:**
@@ -390,7 +396,7 @@ python3 dump/retired_scripts/export-jaeger.py \
 ## 9. `analyze-all-data.py` (Unified Data Pipeline & Statistical Analysis)
 
 > [!NOTE]
-> Skrip ini menyatukan dan menggantikan berkas lama `merge-k6-results.py` serta `statistical-analysis.py` (keduanya kini telah diarsipkan di `dump/retired_scripts/`).
+> Skrip ini menggantikan skrip penggabung lama `merge-k6-results.py` dan bekerja berdampingan dengan `statistical-analysis.py`.
 
 **Tujuan:** Membaca seluruh data pengujian mentah (`data/raw/*/k6-*.json` dan log metrik), menggabungkannya ke dataset processed terpadu, serta menjalankan analisis inferensial statistik formal (Shapiro-Wilk, Mann-Whitney U, Cliff's Delta, Kruskal-Wallis).
 
@@ -477,11 +483,11 @@ python3 scripts/statistical-analysis.py
 
 | Analisis | Uji | Hipotesis |
 |---|---|---|
-| p99 latency ZTA-Naif vs ZTA-Cache | Mann-Whitney U + Cliff's Delta | H1 |
-| Revocation latency vs threshold 100ms | Deskriptif + one-sample test | H2 |
-| Cache hit ratio: graph-aware vs static TTL | Mann-Whitney U + Cliff's Delta | H3 |
-| PBS vs ZTA-Naif vs ZTA-Cache | Kruskal-Wallis + Dunn post-hoc | Multi-grup |
-| Normalitas distribusi | Shapiro-Wilk | Pre-check |
+| p99 latency PBS, ZTA-Naif, ZTA-Cache | Mann-Whitney U + Cliff's Delta + TOST ($\Delta = 5\%$) + Bootstrap CI | H1 |
+| Revocation latency vs threshold 100ms | Deskriptif + Wilcoxon signed-rank (1-sided) | H2 |
+| Pipeline adaptif graph-aware (S07) vs statis (S10) | Mann-Whitney U + Cliff's Delta + TOST ($\Delta = 5\%$) | H3 |
+| Topologi (Linear vs Fan-out vs Mesh) & Resource | Kruskal-Wallis + Mann-Whitney U post-hoc (Bonferroni $\alpha' = 0{,}0167$) | H4 & Multi-grup |
+| Normalitas distribusi (S01–S10) | Shapiro-Wilk ($n = 30$) | Pre-check |
 
 **Dependensi Python:**
 ```
@@ -492,52 +498,46 @@ matplotlib>=3.8.0
 seaborn>=0.13.0
 ```
 
-**Output laporan `statistical-analysis.txt`:**
+**Output ringkasan `statistical-analysis.py` (data kanonikal $n = 30$):**
 ```
-============================================================
-ANALISIS STATISTIK: ZTA Predictive Authorization Caching
-============================================================
-Generated: 2026-10-15T18:00:00Z
+======================================================================
+ANALISIS STATISTIK - ZTA Predictive Authorization Caching
+======================================================================
 
-[NORMALITAS]
-Shapiro-Wilk: ZTA-Naif @ 500 RPS: W=0.9102, p=0.018 -> Non-normal
-Shapiro-Wilk: ZTA-Cache @ 500 RPS: W=0.9341, p=0.042 -> Non-normal
--> Pengujian non-parametrik (Mann-Whitney U, Hodges-Lehmann, TOST) diwajibkan.
+[NORMALITAS - SHAPIRO-WILK (n = 30 per skenario)]
+Seluruh 10 skenario (S01-S10) menolak H0 normalitas (W = 0.5933 s.d. 0.8460, p < 0.001)
+-> Wajib menggunakan statistik non-parametrik (Mann-Whitney U, Cliff's Delta, Hodges-Lehmann, TOST, Bootstrap CI).
 
-[H1] TOST Equivalence & Latency Reduction
-- Equivalence Margin: [-0.50 ms, +0.50 ms]
-- ZTA-Cache vs PBS Baseline:
-  Hodges-Lehmann median diff: -0.04 ms (90% CI: [-0.18 ms, +0.12 ms])
-  TOST Upper Bound t1: p < 0.001, Lower Bound t2: p < 0.001
-  -> EKUIVALENSI TERBUKTI (ZTA-Cache memulihkan performa setara PBS)
-- Latensi vs ZTA-Naif:
-  @ 500 RPS:  Naif=14.80 ms -> Cache=1.85 ms (Reduksi: 87.5%, Cliff's Delta d=-0.94)
-  @ 2000 RPS: Naif=48.20 ms -> Cache=2.12 ms (Reduksi: 95.6%, Cliff's Delta d=-0.98)
-  @ 5000 RPS: Naif=124.5 ms -> Cache=3.40 ms (Reduksi: 97.3%, Cliff's Delta d=-0.99)
--> H1 DITERIMA PENUH
+[H1] Overhead Otorisasi ZTA & Efektivitas Predictive Caching
+- Margin Kesetaraan Praktis TOST: Delta = 5% median baseline (14.79 ms @ 500 RPS; 111.37 ms @ 2000 RPS)
+- PBS vs ZTA-Naif @ 500 RPS : Median 295.85 vs 301.36 ms | U = 421.0, p = 0.6735, delta = -0.0644 (negligible), HL = -10.48 ms, p_TOST = 0.3809
+- ZTA-Naif vs Cache @ 500 RPS: Median 301.36 vs 293.30 ms | U = 503.0, p = 0.4376, delta = +0.1178 (negligible), HL = +16.63 ms, p_non_inf = 0.0727
+- PBS vs ZTA-Cache @ 500 RPS : Median 295.85 vs 293.30 ms | U = 475.0, p = 0.7172, delta = +0.0556 (negligible), HL = +5.79 ms, p_non_inf = 0.1664
+  Bootstrap (Cache - PBS)    : Median diff = -2.55 ms | 90% CI: [-51.56, +50.06] ms | 95% CI: [-64.49, +57.78] ms
+- ZTA-Naif vs Cache @ 2000 RPS: Median 2227.32 vs 2243.83 ms | U = 428.0, p = 0.7506, delta = -0.0489 (negligible), HL = -17.67 ms
+  TOST / Non-Inferiority     : p_upper = 0.0251 < 0.05 (Terbukti non-inferior dan bebas degradasi praktis)
 
-[H2] Revocation Invalidation Latency (Threshold SLA = 100 ms)
-- Sample N = 30 event revokasi terdistribusi
-- Median: 1.72 ms | p95: 2.45 ms | p99: 3.81 ms | Max: 4.95 ms
-- Safety Margin vs SLA: 96.19%
--> H2 DITERIMA (p99 = 3.81 ms << 100 ms)
+[H2] Latensi Revokasi & Broadcast Control-Plane vs Target Desain 100 ms (S09, n = 30)
+- Median: 18.65 ms | Mean: 41.87 ms | SD: 49.30 ms | p90: 102.32 ms | p99: 183.39 ms
+- Kepatuhan Run (< 100 ms): 26/30 run (86.7%, batas run ke-26 = 92.40 ms)
+- Wilcoxon 1-sided (H1: median < 100 ms): W+ = 43.0, p = 1.18e-05 (< 0.0001) -> H2 TERPENUHI
 
-[H3] Graph-Aware Predictive vs Static Cache Hit Ratio
-- Static TTL Median: 61.2% | Graph-Aware Median: 88.4%
-- Mann-Whitney U: W = 892.0, p < 0.001, Cliff's Delta d = +0.82 (Large)
--> H3 DITERIMA
+[H3] Pipeline Adaptif Graph-Aware (S07) vs Pipeline Statis (S10) @ 2000 RPS Fan-out
+- Static (S10) Median: 5927.94 ms | Graph-Aware (S07) Median: 6140.55 ms
+- Mann-Whitney U: U = 436.0, p = 0.8418, Cliff's delta = -0.0311 (negligible), HL = -40.67 ms, p_TOST = 0.2102
+- Reduksi Jendela Keterpaparan (W_exposure steady-state):
+  Low-sensitivity (p_s = 0.0): 30.0 s (0% reduksi)
+  Medium-sensitivity (p_s = 0.3): <= 21.0 s (30.0% reduksi)
+  High-sensitivity (p_s = 0.7): <= 9.0 s (70.0% reduksi)
 
-[H4] Dynamic Exposure Window Risk Reduction
-- Low-sensitivity endpoints: Reduksi window eksposur sebesar 70.0%
-- High-sensitivity endpoints: Reduksi window eksposur sebesar 30.0%
--> H4 DITERIMA
-
-[MULTI-GRUP OMNIBUS]
-- Kruskal-Wallis: H = 79.12, p < 0.001 -> Signifikan antar 3 arsitektur
-- Dunn's Post-Hoc (Bonferroni adjusted):
-  PBS vs ZTA-Cache: p = 0.842 (Tidak berbeda secara signifikan / setara)
-  PBS vs ZTA-Naif : p < 0.001 (Signifikan)
-  ZTA-Cache vs ZTA-Naif: p < 0.001 (Signifikan)
+[H4 & MULTI-GRUP OMNIBUS]
+- Konfigurasi @ 500 RPS (PBS vs Naif vs Cache): Kruskal-Wallis H = 0.63, p = 0.7311 (Tidak berbeda signifikan)
+- Topologi @ 2000 RPS (Linear vs Fan-out vs Mesh): Kruskal-Wallis H = 63.40, p = 1.71e-14 (Signifikan)
+  Post-Hoc Mann-Whitney U (Bonferroni alpha' = 0.0167):
+  * Linear vs Fan-out: U = 0.0, p = 3.02e-11, delta = -1.00 (large)
+  * Linear vs Mesh   : U = 45.0, p = 2.23e-09, delta = -0.90 (large)
+  * Fan-out vs Mesh  : U = 745.0, p = 1.34e-05, delta = +0.66 (large)
+- Resource Overhead @ 500 RPS: CPU H = 2.79 (p = 0.2478), Memory H = 0.91 (p = 0.6359)
 ```
 
 **Error handling:**

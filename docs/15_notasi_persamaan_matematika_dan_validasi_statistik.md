@@ -13,9 +13,9 @@ Tabel berikut mendefinisikan seluruh variabel, himpunan, konstanta, dan paramete
 
 | Simbol | Domain / Tipe | Definisi Matematis dan Makna Fisik | Implementasi Basis Kode |
 | :--- | :--- | :--- | :--- |
-| $G = (V, E)$ | Graf Berarah | Topologi ketergantungan microservice; $V$ adalah himpunan service, $E$ adalah himpunan directed edge pemanggilan antar-service | [`control-plane/graph-analyzer/graph/graph.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/graph.go) |
-| $e = (u, v)$ | $e \in E$ | Relasi pemanggilan dari service pemanggil (*source/client*) $u$ ke service target (*destination/server*) $v$ | [`control-plane/graph-analyzer/graph/graph.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/graph.go) |
-| $f(e)$ | $\mathbb{Z}_{\ge 0}$ | Frekuensi kumulatif pemanggilan HTTP pada edge $e$ per menit (`CallsPerMinute`) | [`control-plane/graph-analyzer/graph/graph.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/graph.go) |
+| $G = (V, E)$ | Graf Berarah | Topologi ketergantungan microservice; $V$ adalah himpunan service, $E$ adalah himpunan directed edge pemanggilan antar-service | [`control-plane/graph-analyzer/graph/topology.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/topology.go) |
+| $e = (u, v)$ | $e \in E$ | Relasi pemanggilan dari service pemanggil (*source/client*) $u$ ke service target (*destination/server*) $v$ | [`control-plane/graph-analyzer/graph/topology.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/topology.go) |
+| $f(e)$ | $\mathbb{Z}_{\ge 0}$ | Frekuensi kumulatif pemanggilan HTTP pada edge $e$ per menit (`CallsPerMinute`) | [`control-plane/graph-analyzer/graph/topology.go`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/topology.go) |
 | $\hat{f}(e)$ | $[0, 1] \subset \mathbb{R}$ | Frekuensi panggilan ternormalisasi: $\hat{f}(e) = f(e) / \max_{e' \in E} f(e')$ | [`control-plane/graph-analyzer/graph/centrality.go:104`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/centrality.go#L104) |
 | $C_B(v)$ | $[0, 1] \subset \mathbb{R}$ | *Betweenness Centrality* ternormalisasi dari simpul $v$ menggunakan algoritma Brandes | [`control-plane/graph-analyzer/graph/centrality.go:50-54`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/centrality.go#L50-L54) |
 | $S(e)$ | $[0, 1] \subset \mathbb{R}$ | Skor prioritas gabungan untuk edge $e$: $S(e) = w \cdot \hat{f}(e) + (1 - w) \cdot C_B(source_e)$ | [`control-plane/graph-analyzer/graph/centrality.go:107`](file:///d:/Penelitian/zta-predictive-cache/control-plane/graph-analyzer/graph/centrality.go#L107) |
@@ -76,7 +76,9 @@ Untuk mengalokasikan kapasitas memori sidecar yang terbatas ($K_{\text{local}} \
 $$S(e) = w \times \hat{f}(e) + (1 - w) \times C_B(source_e) \quad \text{...(2)}$$
 
 di mana komponen normalisasi didefinisikan sebagai:
-$$\hat{f}(e) = \frac{f(e)}{\max_{e' \in E} f(e')}, \quad C_B(v) = \frac{C_B^{\text{raw}}(v)}{\max_{u \in V} C_B^{\text{raw}}(u)}$$
+$$\hat{f}(e) = \frac{f(e)}{\max_{e' \in E} f(e')}, \quad C_B(v) = \frac{C_B^{\text{raw}}(v)}{\max_{u \in V} C_B^{\text{raw}}(u)}, \quad C_B^{\text{raw}}(v) = \sum_{s \neq v \neq t \in V} \frac{\sigma_{st}(v)}{\sigma_{st}}$$
+
+di mana $\sigma_{st}$ adalah jumlah total jalur terpendek berarah dari simpul $s$ ke simpul $t$, dan $\sigma_{st}(v)$ adalah jumlah jalur terpendek tersebut yang melewati simpul perantara $v$ (Freeman, 1977).
 
 Formula ini memberikan bobot lebih tinggi pada frekuensi panggilan (70%) dibandingkan posisi topologis (30%). Rasio awal $w = 0{,}7$ ini ditetapkan berdasarkan dua pertimbangan:
 1. Manfaat caching berkorelasi langsung dengan frekuensi penggunaan ulang entri: pasangan service yang jarang dipanggil memperoleh manfaat latensi yang sangat kecil dari retensi cache, sehingga frekuensi panggilan menjadi prediktor utama utilitas cache.
@@ -95,11 +97,11 @@ Apabila terdapat dua edge dengan nilai skor kontinu yang berdekatan, sistem mene
 ---
 
 ### 2.3 Analisis Sensitivitas Bobot $w$ & Kendall's Tau ($\tau$)
-Pada topologi ber-ingress tunggal di mana simpul sumber berada di periferal ($C_B = 0$), formula prioritas terdegenerasi menjadi fungsi frekuensi murni ($S(e) = w \cdot \hat{f}(e)$) dengan urutan peringkat yang invarian terhadap $w$ (Kendall's $\tau = 1{,}0$). Namun, keunggulan struktural dari sentralitas antara ($C_B > 0$) termanifestasi secara nyata pada topologi multi-hop dengan simpul perantara jembatan saat kapasitas cache terbatas, sebagaimana dibuktikan secara empiris dalam studi ablasi pada Bab 4.9.
+Pada topologi ber-ingress tunggal di mana simpul sumber berada di periferal ($C_B = 0$), formula prioritas terdegenerasi menjadi fungsi frekuensi murni ($S(e) = w \cdot \hat{f}(e)$) dengan urutan peringkat yang invarian terhadap $w$ (Kendall's $\tau = 1{,}0$). Namun, keunggulan struktural dari sentralitas antara ($C_B > 0$) termanifestasi secara nyata pada topologi multi-hop dengan simpul perantara jembatan saat kapasitas cache terbatas, sebagaimana didemonstrasikan secara empiris melalui mekanisme kausal dan ukuran efek praktis dalam studi ablasi pada Bab 4.9.
 
 ---
 
-## 3. Kerangka Uji Statistik Inferensial (Sesuai Bab 3.6 Naskah)
+## 3. Kerangka Uji Statistik Inferensial (Sesuai Bab 3.1 & Bab 3.7 Naskah)
 
 ### 3.1 Formulasi Hipotesis Penelitian
 Penelitian ini menguji empat hipotesis inti terkait performa dan keamanan Zero Trust:
@@ -115,7 +117,7 @@ Penelitian ini menguji empat hipotesis inti terkait performa dan keamanan Zero T
 ---
 
 ### 3.2 Protokol Pengujian Statistik Standar
-Sesuai dengan pedoman penulisan ilmiah IEEE/ACM dan penyelarasan metodologi (Bab 3.6), pengujian statistik dijalankan menggunakan metode baku bereputasi tinggi:
+Sesuai dengan pedoman penulisan ilmiah IEEE/ACM dan penyelarasan metodologi (Bab 3.7), pengujian statistik dijalankan menggunakan metode baku bereputasi tinggi:
 1. **Uji Normalitas Shapiro-Wilk ($W$) (Shapiro & Wilk, 1965):** Menguji asumsi normalitas distribusi empiris latensi ($n = 30$, $\alpha = 0{,}05$).
 2. **Uji Beda Dua Kelompok Mann-Whitney $U$ (Mann & Whitney, 1947):** Uji dua sisi digunakan untuk mengevaluasi skenario beban dasar independen, sedangkan uji satu sisi direksional digunakan pada studi ablasi (Bab 4.9) sesuai hipotesis apriori penurunan latensi.
 3. **Ukuran Efek Non-Parametrik Cliff's Delta ($\delta$) (Cliff, 1993):** Mengukur derajat dominasi stokastik antar-distribusi dengan benchmark Romano et al. (2006).
@@ -135,13 +137,17 @@ $$T_{\text{request}}(N) = T_{\text{hash}} + T_{\text{exp}} + T_{\text{nonce}} + 
 
 Notasi $O(1)$ di sini mengacu pada independensi terhadap ukuran klaster $N$ (serta rata-rata $O(1)$ terhadap kapasitas lokal $K_{\text{local}} \le 50$ melalui tabel hash in-memory). Waktu eksekusi in-memory WASM filter berada pada kisaran mikrodetik dan sepenuhnya independen terhadap jumlah layanan $N$.
 
-### 4.2 Persamaan (4): Batas Sinkronisasi Data-Plane WASM
+### 4.2 Persamaan (3a): Batas Sinkronisasi Data-Plane WASM
 Batas waktu maksimum propagasi penegakan revokasi dan pembaruan state pada data plane dibatasi secara deterministik oleh interval sinkronisasi periodik (*polling tick*):
 
-$$T_{\text{sync}} \le T_{\text{tick}} = 2000\text{ ms} \quad \text{...(4)}$$
+$$T_{\text{sync}} \le T_{\text{tick}} = 2000\text{ ms} \quad \text{...(3a)}$$
 
-### 4.3 Analisis Asimtotik Skalabilitas Control Plane
-1. **Komputasi Graf Centrality:** Algoritma Brandes tak-berbobot pada Graph Topology Analyzer memiliki kompleksitas $O(V \cdot E) \approx O(V^2)$ untuk rata-rata keterhubungan konstan $E \approx c \cdot V$. Pada skala $V = 1.000$ service ($E = 3.000$), komputasi membutuhkan $\approx 15{,}07\text{ detik}$, yang sepenuhnya berada di bawah batas interval background $T_{\text{interval}} = 30\text{ detik}$. Untuk klaster skala sangat besar, algoritma *approximate betweenness centrality* Geisberger et al. (2008) dapat menurunkan kompleksitas menjadi $O(k \cdot (V + E))$ dengan $k \ll V$ sampel pivot.
+### 4.3 Persamaan (4): Analisis Asimtotik Skalabilitas Control Plane
+Kompleksitas komputasi siklus analisis topologi graf dan distribusi token pada control plane dirumuskan sebagai:
+
+$$T_{\text{analysis}}(V, E) = O(V \cdot E) + O(E \cdot \log E) + O(K_{\text{cluster}}) \quad \text{...(4)}$$
+
+1. **Komputasi Graf Centrality:** Algoritma Brandes tak-berbobot pada Graph Topology Analyzer memiliki kompleksitas $O(V \cdot E) \approx O(V^2)$ untuk rata-rata keterhubungan konstan $E \approx c \cdot V$. Pada skala $V = 1.000$ service ($E = 3.000$), komputasi membutuhkan $\approx 15{,}07\text{ detik}$ ($15.000{,}00\text{ ms}$ Brandes + $69{,}30\text{ ms}$ ranking & seleksi), yang sepenuhnya berada di bawah batas interval background $T_{\text{interval}} = 30\text{ detik}$. Untuk klaster skala sangat besar, algoritma *approximate betweenness centrality* Geisberger et al. (2008) dapat menurunkan kompleksitas menjadi $O(k \cdot (V + E))$ dengan $k \ll V$ sampel pivot.
 2. **Batas Memori Sidecar:** $M_{\text{sidecar}} = K_{\text{local}} \times S_{\text{token}} \le 50 \times 400\text{ B} \approx 19{,}53\text{ KB}$ per sidecar. Pada skala 1.000 service, total memori seluruh klaster adalah $\approx 19{,}53\text{ MB}$ (bersifat *negligible* $< 0{,}05\%$ kapasitas node).
 3. **Bandwidth Distribusi Token:** $BW_{\text{sidecar}} \le (K_{\text{local}} \times S_{\text{token}}) / T_{\text{interval}} \approx 0{,}65\text{ KB/s}$, dan bandwidth agregat klaster $BW_{\text{cluster}} \approx 39{,}06\text{ KB/s}$ untuk 1.000 service.
 
@@ -195,20 +201,20 @@ Seluruh nilai di bawah ini diekstraksi bit-for-bit dari dataset kanonikal resmi 
 
 ---
 
-### 5.3 Hasil Uji Hipotesis Dua Kelompok & Kesetaraan (Tabel 6 & Tabel 9 Naskah)
+### 5.3 Hasil Uji Hipotesis Dua Kelompok & Kesetaraan (Tabel 6, Tabel 8, & Tabel 9 Naskah)
 *Sumber Data:* [`data/reports/mann-whitney-results.csv`](file:///d:/Penelitian/zta-predictive-cache/data/reports/mann-whitney-results.csv) dan [`data/reports/tost-equivalence-results.csv`](file:///d:/Penelitian/zta-predictive-cache/data/reports/tost-equivalence-results.csv)
 
-| Perbandingan Pasangan | Beban | Median A (ms) | Median B (ms) | $U$ | $p_{\text{MWU}}$ | Cliff's $\delta$ | Margin $\Delta$ | $\hat{\theta}_{HL}$ (ms) | $p_{\text{TOST}}$ | Keputusan Statistik |
+| Perbandingan Pasangan | Beban | Median A (ms) | Median B (ms) | $U$ | $p_{\text{MWU}}$ | Cliff's $\delta$ | Margin $\Delta$ | $\hat{\theta}_{HL}$ (ms) | $p_{\text{TOST}} / p_{\text{non-inf}}$ | Keputusan Statistik |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **PBS vs ZTA Naif** | 500 RPS | 295,85 | 301,36 | 421,0 | 0,673 | -0,06 (Negligible) | 14,79 ms | -10,48 | 0,3809 | Belum Konklusif ($p_{\text{TOST}} > 0{,}05$) |
-| **ZTA Naif vs Cache** | 500 RPS | 301,36 | 293,30 | 503,0 | 0,438 | +0,12 (Negligible) | 14,79 ms | +16,63 | 0,0727 | Belum Konklusif ($p_{\text{TOST}} > 0{,}05$) |
-| **PBS vs ZTA Cache** | 500 RPS | 295,85 | 293,30 | 475,0 | 0,717 | +0,06 (Negligible) | 14,79 ms | +5,79 | 0,1664 | Belum Konklusif ($p_{\text{TOST}} > 0{,}05$) |
+| **PBS vs ZTA Naif** | 500 RPS | 295,85 | 301,36 | 421,0 | 0,673 | -0,06 (Negligible) | 14,79 ms | -10,48 | 0,3809 | Tidak Signifikan (Efek *Negligible*) |
+| **ZTA Naif vs Cache** | 500 RPS | 301,36 | 293,30 | 503,0 | 0,438 | +0,12 (Negligible) | 14,79 ms | +16,63 | 0,0727 | Paritas Terpelihara ($p_{\text{MWU}} > 0{,}05$; Efek *Negligible*) |
+| **PBS vs ZTA Cache** | 500 RPS | 295,85 | 293,30 | 475,0 | 0,717 | +0,06 (Negligible) | 14,79 ms | +5,79 | 0,1664 | Paritas Bebas Penalti ($p_{\text{MWU}} > 0{,}05$; Efek *Negligible*) |
 | **ZTA Naif vs Cache** | 2000 RPS | 2227,32 | 2243,83 | 428,0 | 0,751 | -0,05 (Negligible) | 111,37 ms | -17,67 | 0,0251 | **Terbukti Setara Praktis dan Non-Inferior via TOST ($p_{\text{TOST}} = 0{,}0251 < 0{,}05$)** |
-| **Static S10 vs Adaptive S07** | 2000 RPS | 5927,94 | 6140,55 | 436,0 | 0,842 | -0,03 (Negligible) | 296,40 ms | -40,67 | 0,210 | Paritas Bebas Penalti ($p_{\text{MWU}} = 0{,}842,\ \delta = -0{,}03$) |
+| **Static S10 vs Adaptive S07** | 2000 RPS | 5927,94 | 6140,55 | 436,0 | 0,842 | -0,03 (Negligible) | 296,40 ms | -40,67 | 0,2102 | Paritas Bebas Penalti ($p_{\text{MWU}} = 0{,}842,\ \delta = -0{,}03$) |
 
 **Interval Kepercayaan Resampling Bootstrap (ZTA Cache vs PBS @ 500 RPS, $B = 10.000$, seed = 42):**
-- Selisih Median $(\text{ZTA Cache} - \text{PBS})$: $-2{,}55\text{ ms}$ (95% Bootstrap CI: $[-64{,}49;\ +57{,}78]\text{ ms}$).
-- Hodges-Lehmann Shift $(\text{ZTA Cache} - \text{PBS})$: $\hat{\theta}_{HL} = +5{,}79\text{ ms}$.
+- Selisih Median $(\text{ZTA Cache} - \text{PBS})$: $-2{,}55\text{ ms}$ (90% Bootstrap CI: $[-51{,}56;\ +50{,}06]\text{ ms}$; 95% Bootstrap CI: $[-64{,}49;\ +57{,}78]\text{ ms}$).
+- Hodges-Lehmann Shift $(\text{PBS} - \text{ZTA Cache})$: $\hat{\theta}_{HL} = +5{,}79\text{ ms}$ (atau $-5{,}79\text{ ms}$ untuk arah $\text{ZTA Cache} - \text{PBS}$).
 
 ---
 
@@ -218,9 +224,9 @@ Seluruh nilai di bawah ini diekstraksi bit-for-bit dari dataset kanonikal resmi 
 | Metrik Distribusi Revokasi | Nilai Empiris Riil | Target Desain Operasional | Evaluasi Kepatuhan |
 | :--- | :---: | :---: | :--- |
 | **Rata-rata (*Mean*)** | **41,87 ms** | $\le 100\text{ ms}$ | Memenuhi Target Operasional |
-| **Median ($\\theta_{\text{median}}$)** | **18,65 ms** | $\le 100\text{ ms}$ | $5{,}4\times$ di bawah batas target |
-| **Standar Deviasi** | **49,32 ms** | - | Variabilitas Terkendali |
-| **Persentil ke-90 (p90)** | **94,75 ms** | $\le 100\text{ ms}$ | Memenuhi Target Operasional |
+| **Median ($\theta_{\text{median}}$)** | **18,65 ms** | $\le 100\text{ ms}$ | $5{,}4\times$ di bawah batas target |
+| **Standar Deviasi** | **49,30 ms** | - | Variabilitas Terkendali ($\text{ddof}=1$) |
+| **Persentil ke-90 (p90)** | **102,32 ms** | $\le 100\text{ ms}$ | Batas 86,7% (run ke-26) = 92,40 ms |
 | **Persentil ke-99 (p99)** | **183,39 ms** | $\approx 100\text{ ms}$ | Batas Ekor Siklus Sinkronisasi |
 | **Tingkat Kepatuhan Run ($< 100\text{ ms}$)** | **26 dari 30 run (86,7%)** | $< 100\text{ ms}$ | Mayoritas signifikan di bawah target |
 | **Tingkat Keberhasilan Penolakan Akses** | **30 dari 30 run (100,0%)** | 100,0% | Penolakan Kredensial 100% Berhasil |
@@ -229,7 +235,7 @@ Seluruh nilai di bawah ini diekstraksi bit-for-bit dari dataset kanonikal resmi 
 
 ---
 
-### 5.5 Hasil Uji Multi-Kelompok Topologi dan Sumber Daya (Tabel 8 & Tabel 10 Naskah)
+### 5.5 Hasil Uji Multi-Kelompok Topologi dan Sumber Daya (Tabel 10 & Tabel 11 Naskah)
 *Sumber Data:* [`data/reports/kruskal-wallis-results.csv`](file:///d:/Penelitian/zta-predictive-cache/data/reports/kruskal-wallis-results.csv) dan [`data/reports/mann-whitney-results.csv`](file:///d:/Penelitian/zta-predictive-cache/data/reports/mann-whitney-results.csv)
 
 | Domain Evaluasi | Kelompok Perlakuan | Statistik $H$ | Nilai $p$ ($p$-value) | Status Signifikansi | Makna Ilmiah |
@@ -257,7 +263,7 @@ Seluruh nilai di bawah ini diekstraksi bit-for-bit dari dataset kanonikal resmi 
 
 *Catatan Metodologi Ablasi:*
 - Nilai statistik $U_{\text{Graph}} = 8{,}0$ dievaluasi pada arah hipotesis satu sisi penurunan latensi ($H_1: \text{Graph-Aware} < \text{LFU}$), dengan nilai ekuivalensi dua sisi $p_{\text{2-sided}} = 0{,}421$ ($U_{\text{LFU}} = n_1 n_2 - U_{\text{Graph}} = 25 - 8 = 17{,}0$).
-- Keberhasilan prioritisasi graf terbukti secara konsisten memangkas latensi ekor p99 pada simpul jembatan perantara ($e_2: \text{cartservice} \rightarrow \text{productcatalogservice}$) sebesar 6,4% tanpa mengorbankan performa transaksi langsung periferal.
+- Prioritisasi berbasis graf mendemonstrasikan mekanisme kausal dan keunggulan ukuran efek praktis tingkat menengah ($\text{Cliff's } \delta = +0{,}360$, $U = 8{,}0$, $p = 0{,}210$ pada $n = 5$) dengan memangkas median latensi ekor p99 pada simpul jembatan perantara ($e_2: \text{cartservice} \rightarrow \text{productcatalogservice}$) sebesar 6,4% tanpa mengorbankan performa transaksi langsung periferal.
 
 ---
 
@@ -272,15 +278,16 @@ Tabel matriks ketertelusuran berikut membuktikan relasi langsung tanpa celah ant
 │ Persamaan (1) TTL       │ cache/ttl.go:CalculateTTL           │ seed-candidates.json        │ analyze-all-data.py   │ Bab 3.3   │
 │ Persamaan (2) S(e)      │ graph/centrality.go:RankEdges       │ edge-topology.json          │ generate-figures.py   │ Bab 3.3   │
 │ Persamaan (3) T_req     │ wasm-filter/authz/decision.go       │ k6 p99 latency duration     │ scalability-analysis  │ Bab 4.8   │
-│ Persamaan (4) T_sync    │ wasm-filter/main.go (T_tick)        │ TickDuration = 2000ms       │ statistical-analysis  │ Bab 3.2   │
-│ Uji Normalitas Shapiro  │ scipy.stats.shapiro                 │ 300 k6 JSON summaries       │ statistical-analysis  │ Bab 3.6   │
+│ Persamaan (3a) T_sync   │ wasm-filter/main.go (T_tick)        │ TickDuration = 2000ms       │ statistical-analysis  │ Bab 3.2   │
+│ Persamaan (4) T_analysis│ graph/centrality.go:Betweenness     │ 1000-service projection     │ scalability-analysis  │ Bab 4.8   │
+│ Uji Normalitas Shapiro  │ scipy.stats.shapiro                 │ 300 k6 JSON summaries       │ statistical-analysis  │ Bab 3.7   │
 │ Uji Mann-Whitney U      │ scipy.stats.mannwhitneyu            │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel 6   │
 │ Ukuran Efek Cliff's δ   │ scripts/statistical-analysis.py:cd  │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel 6   │
 │ Uji Kesetaraan TOST     │ scripts/statistical-analysis.py     │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel 6,9 │
 │ Percentile Bootstrap CI │ scripts/statistical-analysis.py     │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel 4,6 │
-│ Uji Kruskal-Wallis H    │ scipy.stats.kruskal                 │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel 8,11│
+│ Uji Kruskal-Wallis H    │ scipy.stats.kruskal                 │ latency-all-scenarios.csv   │ statistical-analysis  │ Tabel10,11│
 │ Uji Wilcoxon Revokasi   │ scipy.stats.wilcoxon                │ revocation-latency.csv      │ statistical-analysis  │ Tabel 7   │
-│ Studi Ablasi (K=2)      │ scripts/generate_ablation_figure.py │ ablation_comparison_table   │ analyze_ablation.py   │ Tabel 12  │
+│ Studi Ablasi (K=2)      │ scripts/generate_ablation_figure.py │ ablation_comparison_table   │ analyze_ablation_res  │ Tabel 12  │
 └─────────────────────────┴─────────────────────────────────────┴─────────────────────────────┴───────────────────────┴───────────┘
 ```
 

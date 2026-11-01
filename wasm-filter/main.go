@@ -59,6 +59,7 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 		type pluginConfig struct {
 			SigningKey          string `json:"signing_key"`
 			EnableBenchmarkSeed *bool  `json:"enable_benchmark_seed,omitempty"`
+			EnableBenchmarkMode *bool  `json:"enable_benchmark_mode,omitempty"`
 			TrustDomain         string `json:"trust_domain,omitempty"`
 			Namespace           string `json:"namespace,omitempty"`
 			MaxEntries          int    `json:"max_entries,omitempty"`
@@ -71,6 +72,8 @@ func (p *pluginContext) OnPluginStart(pluginConfigurationSize int) types.OnPlugi
 				}
 				if cfg.EnableBenchmarkSeed != nil {
 					p.enableBenchmarkMode = *cfg.EnableBenchmarkSeed
+				} else if cfg.EnableBenchmarkMode != nil {
+					p.enableBenchmarkMode = *cfg.EnableBenchmarkMode
 				}
 				if cfg.TrustDomain != "" {
 					p.trustDomain = cfg.TrustDomain

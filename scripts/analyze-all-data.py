@@ -630,16 +630,26 @@ def run_statistical_analysis(k6_df, resource_df):
         rev_p99 = s09["p99_ms"].dropna().values
 
     if len(rev_p99) > 0:
+        rev_p90_val = np.percentile(rev_p99, 90)
         rev_p99_val = np.percentile(rev_p99, 99)
         rev_mean = np.mean(rev_p99)
+        rev_std = np.std(rev_p99, ddof=1)
         rev_median = np.median(rev_p99)
-        threshold_met = rev_p99_val <= 100
+        n_compliant = int(np.sum(rev_p99 <= 100.0))
+        pct_compliant = (n_compliant / len(rev_p99)) * 100.0
+        w_res = stats.wilcoxon(rev_p99 - 100.0, alternative="less")
+        w_stat = float(w_res.statistic)
+        w_pval = float(w_res.pvalue)
+        threshold_met = w_pval < 0.05
 
         print(f"  n            : {len(rev_p99)}")
-        print(f"  Mean p99     : {rev_mean:.4f} ms")
-        print(f"  Median p99   : {rev_median:.4f} ms")
-        print(f"  p99 of p99s  : {rev_p99_val:.4f} ms")
-        print(f"  Threshold    : 100 ms")
+        print(f"  Mean         : {rev_mean:.4f} ms")
+        print(f"  Median       : {rev_median:.4f} ms")
+        print(f"  Std Dev      : {rev_std:.4f} ms")
+        print(f"  p90          : {rev_p90_val:.4f} ms")
+        print(f"  p99          : {rev_p99_val:.4f} ms")
+        print(f"  Kepatuhan    : {n_compliant}/{len(rev_p99)} ({pct_compliant:.1f}% <= 100 ms)")
+        print(f"  Wilcoxon 1-s : W={w_stat:.1f}, p={w_pval:.6e}")
         print(f"  Terpenuhi    : {'✅ Ya' if threshold_met else '❌ Tidak'}")
 
         results_mw.append({
@@ -647,8 +657,13 @@ def run_statistical_analysis(k6_df, resource_df):
             "metric": "revocation_p99_ms",
             "median_a": round(rev_median, 4),
             "mean_a": round(rev_mean, 4),
+            "std_a": round(rev_std, 4),
+            "p90_a": round(rev_p90_val, 4),
             "p99_of_p99s": round(rev_p99_val, 4),
             "threshold_met": threshold_met,
+            "compliant_pct": round(pct_compliant, 2),
+            "wilcoxon_w": w_stat,
+            "wilcoxon_p": round(w_pval, 8),
             "n_a": len(rev_p99),
         })
 
@@ -825,6 +840,20 @@ def run_statistical_analysis(k6_df, resource_df):
     # Descriptive stats
     pd.DataFrame(results_descriptive).to_csv(
         os.path.join(REPORTS_DIR, "descriptive-stats.csv"), index=False)
+
+    # Ensure all 10 scenarios are included in Shapiro-Wilk results
+    for sid_extra, lbl_extra, rps_extra in [
+        ("s06-zta-cache-5000rps", "ZTA-Cache 5000 RPS (S06)", 5000),
+        ("s08-zta-cache-mesh", "ZTA-Cache Mesh 2000 RPS (S08)", 2000),
+        ("s09-revocation-test", "Revocation Test 500 RPS (S09)", 500),
+    ]:
+        arr_extra = k6_df[k6_df.scenario_id == sid_extra]["p99_ms"].dropna().values
+        if len(arr_extra) > 0 and not any(r["label"] == lbl_extra for r in results_shapiro):
+            sw_e = shapiro_wilk(arr_extra, lbl_extra)
+            if sw_e:
+                sw_e["metric"] = "p99_latency_ms"
+                sw_e["rps"] = rps_extra
+                results_shapiro.append(sw_e)
 
     # Shapiro-Wilk
     pd.DataFrame(results_shapiro).to_csv(

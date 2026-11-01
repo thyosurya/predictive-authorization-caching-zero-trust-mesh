@@ -83,8 +83,11 @@ SERVICES = [
     },
 ]
 
-def http_get(url, timeout=3.0):
-    req = urllib.request.Request(url, headers={"User-Agent": "smoke-tester/1.0"})
+def http_get(url, headers=None, timeout=3.0):
+    hdrs = {"User-Agent": "smoke-tester/1.0"}
+    if headers:
+        hdrs.update(headers)
+    req = urllib.request.Request(url, headers=hdrs)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.status, resp.read().decode("utf-8")
 
@@ -204,7 +207,7 @@ def run_tests():
                 "target": "spiffe://cluster.local/ns/zta-research/sa/service-b",
                 "method": "GET",
                 "timestamp": int(time.time())
-            })
+            }, headers={"X-Admin-Token": "test-admin-token"})
             results["telemetry_records"] += 1
 
         # 5 records for service-b -> service-c
@@ -214,11 +217,11 @@ def run_tests():
                 "target": "spiffe://cluster.local/ns/zta-research/sa/service-c",
                 "method": "GET",
                 "timestamp": int(time.time())
-            })
+            }, headers={"X-Admin-Token": "test-admin-token"})
             results["telemetry_records"] += 1
 
         # Query candidates
-        status, cand_body = http_get("http://localhost:8090/candidates")
+        status, cand_body = http_get("http://localhost:8090/candidates", headers={"X-Admin-Token": "test-admin-token"})
         candidates = json.loads(cand_body)
         results["candidates"] = candidates
         print(f"  [+] Candidates discovered by Graph Analyzer ({len(candidates)} edges):")

@@ -4,6 +4,24 @@
 apiVersion: security.istio.io/v1
 kind: AuthorizationPolicy
 metadata:
+  name: zta-ext-authz-frontend
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  action: CUSTOM
+  provider:
+    name: opa-ext-authz
+  rules:
+    - to:
+        - operation:
+            paths: ["/api/*"]
+            methods: ["GET", "POST", "PUT", "DELETE", "PATCH"]
+---
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
   name: zta-ext-authz-productcatalog
   namespace: zta-research
 spec:

@@ -13,46 +13,28 @@ import (
 )
 
 var (
-	requestCount int64
+	requestCount      int64
+	staticProductList = []map[string]interface{}{
+		{"id": 1, "name": "Product A", "price": 19.99},
+		{"id": 2, "name": "Product B", "price": 29.99},
+	}
 )
 
-func main() {
-	serviceName := os.Getenv("SERVICE_NAME")
-	if serviceName == "" {
-		serviceName = "service-a"
-	}
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-	latencyMs, _ := strconv.Atoi(os.Getenv("SIMULATED_LATENCY_MS"))
-
-	productCatalogURL := os.Getenv("PRODUCT_CATALOG_URL")
-	if productCatalogURL == "" {
-		productCatalogURL = "http://productcatalogservice.zta-research.svc.cluster.local:8080"
-	}
-	cartServiceURL := os.Getenv("CART_SERVICE_URL")
-	if cartServiceURL == "" {
-		cartServiceURL = "http://cartservice.zta-research.svc.cluster.local:8080"
-	}
-
-	// High-performance HTTP client for reverse proxying East-West calls
-	httpClient := &http.Client{
-		Timeout: 15 * time.Second,
-		Transport: &http.Transport{
-			MaxIdleConns:        2000,
-			MaxIdleConnsPerHost: 1000,
-			IdleConnTimeout:     90 * time.Second,
-		},
-	}
-
+func newFrontendMux(serviceName, productCatalogURL, cartServiceURL string, latencyMs int, localBenchmarkMode bool, httpClient *http.Client) *http.ServeMux {
 	mux := http.NewServeMux()
 
-	// GET /api/products - Forward to productcatalogservice (East-West traffic)
+	// GET /api/products - Forward to productcatalogservice (East-West) or handle locally (LOCAL_BENCHMARK_MODE=true)
 	mux.HandleFunc("/api/products", func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&requestCount, 1)
 		if latencyMs > 0 {
 			time.Sleep(time.Duration(latencyMs) * time.Millisecond)
+		}
+
+		if localBenchmarkMode {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(staticProductList)
+			return
 		}
 
 		targetURL := productCatalogURL + "/api/products"
@@ -87,11 +69,30 @@ func main() {
 		io.Copy(w, resp.Body)
 	})
 
-	// POST /api/cart - Forward to cartservice (East-West traffic)
+	// /api/cart - Forward to cartservice (East-West) or handle locally (LOCAL_BENCHMARK_MODE=true)
 	mux.HandleFunc("/api/cart", func(w http.ResponseWriter, r *http.Request) {
 		atomic.AddInt64(&requestCount, 1)
 		if latencyMs > 0 {
 			time.Sleep(time.Duration(latencyMs) * time.Millisecond)
+		}
+
+		if localBenchmarkMode {
+			w.Header().Set("Content-Type", "application/json")
+			if r.Method == http.MethodPost {
+				w.WriteHeader(http.StatusCreated)
+				json.NewEncoder(w).Encode(map[string]interface{}{
+					"status":  "item_added",
+					"cart_id": "cart-user-default",
+					"items":   1,
+				})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"cart_id": "cart-user-default",
+				"items":   []map[string]interface{}{{"product_id": 1, "quantity": 1}},
+			})
+			return
 		}
 
 		targetURL := cartServiceURL + "/api/cart"
@@ -150,6 +151,42 @@ func main() {
 		})
 	})
 
-	log.Printf("%s listening on :%s (East-West routing enabled)", serviceName, port)
+	return mux
+}
+
+func main() {
+	serviceName := os.Getenv("SERVICE_NAME")
+	if serviceName == "" {
+		serviceName = "service-a"
+	}
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+	latencyMs, _ := strconv.Atoi(os.Getenv("SIMULATED_LATENCY_MS"))
+	localBenchmarkMode := os.Getenv("LOCAL_BENCHMARK_MODE") == "true"
+
+	productCatalogURL := os.Getenv("PRODUCT_CATALOG_URL")
+	if productCatalogURL == "" {
+		productCatalogURL = "http://productcatalogservice.zta-research.svc.cluster.local:8080"
+	}
+	cartServiceURL := os.Getenv("CART_SERVICE_URL")
+	if cartServiceURL == "" {
+		cartServiceURL = "http://cartservice.zta-research.svc.cluster.local:8080"
+	}
+
+	// High-performance HTTP client for reverse proxying East-West calls
+	httpClient := &http.Client{
+		Timeout: 15 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:        2000,
+			MaxIdleConnsPerHost: 1000,
+			IdleConnTimeout:     90 * time.Second,
+		},
+	}
+
+	mux := newFrontendMux(serviceName, productCatalogURL, cartServiceURL, latencyMs, localBenchmarkMode, httpClient)
+
+	log.Printf("%s listening on :%s (East-West routing enabled: %v)", serviceName, port, !localBenchmarkMode)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }

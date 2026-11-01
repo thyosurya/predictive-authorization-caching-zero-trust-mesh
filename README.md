@@ -3,7 +3,7 @@
 [![Artifact Evaluation](https://img.shields.io/badge/Artifact-Available%20%26%20Reproducible-success.svg)](#)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 [![Go](https://img.shields.io/badge/Go-1.22%2B-blue.svg)](https://golang.org/)
-[![Traceability](https://img.shields.io/badge/Traceability%20Audit-117%2F117%20PASS-brightgreen.svg)](#1-quick-start-1-click-traceability-verification-10-seconds)
+[![Traceability](https://img.shields.io/badge/Traceability%20Audit-119%2F119%20PASS-brightgreen.svg)](#1-quick-start-1-click-traceability-verification-10-seconds)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 Official, standalone **Replication Package & Artifact Evaluation Suite** for the academic paper:
@@ -39,7 +39,7 @@ This repository contains the complete experimental testbed, WebAssembly filter s
 │   └── *.png                      # 10 Indonesian figures (Figures 1-10)
 │
 ├── scripts/                       # Reproduction, verification, and analytical scripts
-│   ├── verify_traceability.py     # 1-click verification of all 117 paper claims
+│   ├── verify_traceability.py     # 1-click verification of all 119 paper claims
 │   ├── validate-data.py           # 10-step raw data completeness and integrity audit
 │   ├── analyze-all-data.py        # Raw data extraction and CSV consolidation
 │   ├── statistical-analysis.py    # Non-parametric hypothesis testing engine
@@ -73,7 +73,7 @@ python scripts/verify_traceability.py
 **Expected output:**
 ```
 ======================================================================
-HASIL: 117/117 PASS, 0/117 FAIL
+HASIL: 119/119 PASS, 0/119 FAIL
 ✅ SELURUH ANGKA DI NASKAH DAPAT DIREPRODUKSI DARI DATA CSV
 ======================================================================
 ```
@@ -94,7 +94,7 @@ python scripts/analyze-all-data.py
 # Step 3: Run non-parametric statistical tests (Mann-Whitney U, Cliff's Delta, TOST, Kruskal-Wallis)
 python scripts/statistical-analysis.py
 
-# Step 4: Regenerate all canonical figures (Figures 1 through 9)
+# Step 4: Regenerate all canonical figures (Figures 1 through 10 + supplementary figure)
 python scripts/generate-figures.py
 python scripts/generate-figures-en.py
 
@@ -133,7 +133,7 @@ go test -v ./wasm-filter/...
 
 ## 4. Hardware and Software Environment
 
-- **Cluster Testbed:** Kubernetes (k3s v1.28.2), 2 vCPU AMD EPYC 7713, 4 GB RAM, Ubuntu 22.04 LTS.
+- **Cluster Testbed:** Kubernetes (k3s v1.28.5+k3s1, containerd 1.7.11), 2 vCPU AMD EPYC 7713, 4 GB RAM, Debian GNU/Linux 12 (bookworm, kernel 6.1.0-47-amd64).
 - **Service Mesh:** Istio 1.20.1 (Envoy Proxy 1.28.0).
 - **Policy Engine:** Open Policy Agent (OPA) 0.60.0.
 - **Load Generator:** k6 v1.6.1 (constant-arrival-rate executor).

@@ -630,8 +630,11 @@ func (svc *DistributorService) distributeLoop(interval time.Duration) {
 				sensitivity = "medium"
 			}
 
-			// Query OPA untuk allowed actions per pasangan
-			actions := svc.queryAllowedActions(client, c.Source, c.Target)
+			// Query OPA untuk allowed actions dan sensitivity per pasangan
+			actions, opaSens := svc.queryPolicyRule(client, c.Source, c.Target)
+			if opaSens != "" {
+				sensitivity = opaSens
+			}
 			if len(actions) == 0 {
 				// ZERO TRUST FAIL-CLOSED: Jangan pernah menerbitkan token jika OPA menolak,
 				// tidak memiliki aturan yang cocok, atau sedang mengalami gangguan jaringan.
@@ -691,6 +694,13 @@ func (svc *DistributorService) distributeLoop(interval time.Duration) {
 // Zero Trust Fail-Closed: return nil jika OPA tidak terjangkau atau tidak ada rule cocok.
 // Menghilangkan pencocokan wildcard implisit jika identifier kosong.
 func (svc *DistributorService) queryAllowedActions(client *http.Client, source, target string) []string {
+	actions, _ := svc.queryPolicyRule(client, source, target)
+	return actions
+}
+
+// queryPolicyRule queries OPA untuk mendapat allowed actions dan sensitivity per pasangan service.
+// Zero Trust Fail-Closed: return nil jika OPA tidak terjangkau atau tidak ada rule cocok.
+func (svc *DistributorService) queryPolicyRule(client *http.Client, source, target string) ([]string, string) {
 	type opaInput struct {
 		SourceIdentity string `json:"source_identity"`
 		TargetIdentity string `json:"target_identity"`
@@ -708,17 +718,17 @@ func (svc *DistributorService) queryAllowedActions(client *http.Client, source, 
 		},
 	})
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 
 	resp, err := client.Post(svc.opaPDPURL+"/v1/data/service_rules", "application/json", bytes.NewReader(reqBytes))
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil
+		return nil, ""
 	}
 
 	var result struct {
@@ -728,10 +738,11 @@ func (svc *DistributorService) queryAllowedActions(client *http.Client, source, 
 			SourceIdentity string   `json:"source_identity"`
 			TargetIdentity string   `json:"target_identity"`
 			AllowedActions []string `json:"allowed_actions"`
+			Sensitivity    string   `json:"sensitivity"`
 		} `json:"result"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
-		return nil
+		return nil, ""
 	}
 
 	// Cari rule yang cocok dengan source DAN target identity secara ketat (tanpa wildcard implisit pada string kosong)
@@ -750,10 +761,10 @@ func (svc *DistributorService) queryAllowedActions(client *http.Client, source, 
 		sourceMatch := (ruleSource != "" && (ruleSource == source || ruleSource == "*"))
 		targetMatch := (ruleTarget != "" && (ruleTarget == target || ruleTarget == "*"))
 		if sourceMatch && targetMatch {
-			return rule.AllowedActions
+			return rule.AllowedActions, rule.Sensitivity
 		}
 	}
-	return nil
+	return nil, ""
 }
 
 // expiredTokenCleanup menghapus token yang sudah expired dari activeTokens.

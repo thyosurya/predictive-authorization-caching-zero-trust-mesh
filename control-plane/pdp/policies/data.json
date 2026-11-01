@@ -13,10 +13,40 @@
       "sensitivity": "medium"
     },
     {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/frontend",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/currencyservice",
+      "allowed_actions": ["GET", "POST"],
+      "sensitivity": "low"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/cartservice",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice",
+      "allowed_actions": ["GET"],
+      "sensitivity": "low"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/checkoutservice",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/cartservice",
+      "allowed_actions": ["GET", "DELETE"],
+      "sensitivity": "medium"
+    },
+    {
       "source": "spiffe://cluster.local/ns/zta-research/sa/checkoutservice",
       "target": "spiffe://cluster.local/ns/zta-research/sa/paymentservice",
       "allowed_actions": ["POST"],
       "sensitivity": "high"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/checkoutservice",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice",
+      "allowed_actions": ["GET"],
+      "sensitivity": "low"
+    },
+    {
+      "source": "spiffe://cluster.local/ns/zta-research/sa/recommendationservice",
+      "target": "spiffe://cluster.local/ns/zta-research/sa/productcatalogservice",
+      "allowed_actions": ["GET"],
+      "sensitivity": "low"
     }
   ]
 }

@@ -93,10 +93,6 @@ setup: ## Setup cluster lengkap dari nol (estimasi 10-15 menit)
 	bash scripts/register-spire-entries.sh
 	@echo "$(YELLOW)[4/7] Deploying OPA + policies...$(RESET)"
 	$(KUBECTL) apply -f k8s/apps/opa-deployment.yaml -n $(NAMESPACE)
-	$(KUBECTL) create configmap opa-policies \
-	  --from-file=authz.rego=control-plane/pdp/policies/authz.rego \
-	  --from-file=data.json=control-plane/pdp/policies/data.json \
-	  -n $(NAMESPACE) --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	@echo "$(YELLOW)[5/7] Deploying testbed (Online Boutique)...$(RESET)"
 	$(KUBECTL) apply -f k8s/apps/testbed-boutique.yaml -n $(NAMESPACE)
 	$(KUBECTL) wait --for=condition=ready pod --all -n $(NAMESPACE) --timeout=300s
@@ -312,7 +308,7 @@ reset-light: ## Reset ringan: flush cache dan graph (antar pengulangan)
 	$(KUBECTL) wait --for=condition=ready pod -l app=cache-distributor -n $(NAMESPACE) --timeout=60s
 	@curl -s -X DELETE $(GRAPH_ANALYZER_URL)/graph/reset \
 	  -H "X-Admin-Token: $(ADMIN_TOKEN)" | \
-	  python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Reset: cleared {d[\"edges_cleared\"]} edges')" \
+	  python3 -c "import sys,json; d=json.load(sys.stdin); print(f'Reset: cleared {d.get(\"edges_cleared\", 0)} edges')" \
 	  2>/dev/null || echo "Graph reset (port-forward may be needed)"
 	@echo "$(YELLOW)Cooldown 30s...$(RESET)"
 	@sleep 30

@@ -1,4 +1,22 @@
 # k8s/istio/wasm-filter.yaml
+# Catatan: Untuk studi ablasi multi-hop (K_local = 2), ubah max_entries menjadi 2.
+apiVersion: extensions.istio.io/v1alpha1
+kind: WasmPlugin
+metadata:
+  name: authz-cache-filter-frontend
+  namespace: zta-research
+spec:
+  selector:
+    matchLabels:
+      app: frontend
+  url: file:///etc/wasm/authz-cache.wasm
+  phase: AUTHZ
+  pluginConfig:
+    pdp_endpoint: "http://opa-service:8181/v1/data/authz/allow"
+    enable_benchmark_seed: true
+    enable_benchmark_mode: true
+    max_entries: 1000
+---
 apiVersion: extensions.istio.io/v1alpha1
 kind: WasmPlugin
 metadata:
@@ -12,8 +30,9 @@ spec:
   phase: AUTHZ
   pluginConfig:
     pdp_endpoint: "http://opa-service:8181/v1/data/authz/allow"
+    enable_benchmark_seed: true
     enable_benchmark_mode: true
-    max_entries: 2
+    max_entries: 1000
 ---
 apiVersion: extensions.istio.io/v1alpha1
 kind: WasmPlugin
@@ -28,6 +47,6 @@ spec:
   phase: AUTHZ
   pluginConfig:
     pdp_endpoint: "http://opa-service:8181/v1/data/authz/allow"
+    enable_benchmark_seed: true
     enable_benchmark_mode: true
-    max_entries: 2
-
+    max_entries: 1000

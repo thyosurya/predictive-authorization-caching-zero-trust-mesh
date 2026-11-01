@@ -137,13 +137,13 @@ Menggunakan **kedua mekanisme**: push revocation untuk latensi rendah **DAN** TT
 
 **TTL tidak mengorbankan latensi revokasi dalam kasus normal.** Dalam kondisi normal (stream aktif), revokasi terjadi via push dalam < 50ms - jauh di bawah TTL manapun. TTL hanya "aktif" sebagai backup saat stream gagal.
 
-**MaxTTL 60 detik adalah kompromi yang dapat diterima.** Dalam skenario terburuk (stream putus + token tidak expired), access yang tidak sah berlangsung maksimal 60 detik sebelum token expired dan sidecar fallback ke PDP (yang sudah mencerminkan kebijakan revokasi). Ini adalah risk yang diterima sebagai tradeoff antara ketersediaan sistem dan keamanan instan.
+**MaxTTL 30 detik adalah kompromi yang dapat diterima.** Dalam skenario terburuk (stream putus + token tidak expired), access yang tidak sah berlangsung maksimal 30 detik sebelum token expired dan sidecar fallback ke PDP (yang sudah mencerminkan kebijakan revokasi). Ini adalah risk yang diterima sebagai tradeoff antara ketersediaan sistem dan keamanan instan.
 
 ### Alternatif yang Dipertimbangkan
 
 | Alternatif | Alasan ditolak |
 |---|---|
-| Hanya TTL tanpa push revocation | Latensi revokasi = MaxTTL = 60 detik - tidak memenuhi target ≤ 100ms |
+| Hanya TTL tanpa push revocation | Latensi revokasi = MaxTTL = 30 detik - tidak memenuhi target ≤ 100ms |
 | Hanya push revocation tanpa TTL | Token berlaku selamanya jika stream putus - tidak aman |
 | TTL sangat pendek (< 5 detik) | Terlalu banyak token refresh - overhead CPU sidecar dan bandwidth meningkat signifikan |
 | TTL sangat panjang (> 60 detik) | Window vulnerability terlalu besar saat stream putus |
@@ -316,8 +316,8 @@ Menggunakan **Mann-Whitney U test** (non-parametrik) bukan t-test (parametrik), 
 ### Keputusan
 1. **Fail-Closed Header Stripping:** Pada ingress filter Envoy (`OnHttpRequestHeaders`), header `x-zta-cache-verified` dihapus tanpa syarat sebelum evaluasi token cache lokal. Header hanya diinjeksi kembali jika evaluasi menghasilkan `DecisionAllow`. Jika terjadi `DecisionMiss`, header tidak ditambahkan sehingga permintaan otomatis dievaluasi oleh OPA `ext_authz` dengan kebijakan fail-closed (`failureModeAllow: false`).
 2. **Delta-HMAC Token Ingestion:** Cache Distributor dan WASM filter membandingkan payload hash sebelum menjalankan verifikasi signature Ed25519/HMAC yang intensif komputasi, mengabaikan re-verifikasi jika token identik dengan state aktif.
-3. **Deterministic Multi-Tier Graph Tie-Breaking:** Algoritma ranking Graph Analyzer mengurutkan kandidat edge dengan kunci komposit strictly ordered:
-   `(betweenness_score DESC, call_frequency DESC, source_spiffe ASC, target_spiffe ASC)`.
+3. **Deterministic 5-Tier Graph Tie-Breaking:** Algoritma ranking Graph Analyzer (`RankEdgesByImportance`) mengurutkan kandidat edge dengan kunci komposit 5-tingkat (*strict weak ordering* dengan kuantisasi integer $10^9$):
+   `(composite_score DESC, betweenness_score DESC, call_frequency DESC, source_spiffe ASC, target_spiffe ASC)`.
 4. **Delimiter & SPIFFE Sanitization:** Fungsi `isValidSPIFFEURI` memvalidasi string identitas secara ketat, menolak keberadaan substring `->`, newline (`\n`), carriage return (`\r`), dan karakter kontrol sebelum pembentukan cache key.
 
 ### Alasan

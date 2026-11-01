@@ -1,10 +1,9 @@
-comparison,n_a,n_b,median_a,median_b,mean_a,mean_b,u_statistic,p_value,significant,cliffs_d,effect_size,reduction_pct,rps,metric,bonferroni_significant
-PBS@500RPS vs ZTA-Naif@500RPS,30,30,295.8452,301.3642,348.919,369.3931,421.0,0.673495,False,-0.0644,negligible,-1.87,500,p99_latency_pbs_vs_naive,
-ZTA-Naif@500RPS vs ZTA-Cache@500RPS,30,30,301.3642,293.2984,369.3931,328.8666,503.0,0.437641,False,0.1178,negligible,2.68,500,p99_latency_ms,
-ZTA-Naif@2000RPS vs ZTA-Cache@2000RPS,30,30,2227.3224,2243.8343,2383.339,2436.4797,428.0,0.750587,False,-0.0489,negligible,-0.74,2000,p99_latency_ms,
-ZTA-Cache@2000RPS vs ZTA-Cache@5000RPS,30,30,2243.8343,12898.7295,2436.4797,13464.2262,0.0,0.0,True,-1.0,large,-474.85,2000 vs 5000,p99_latency_ms_scalability,
+comparison,n_a,n_b,median_a,median_b,mean_a,mean_b,u_statistic,p_value,significant,cliffs_delta,effect_size,reduction_pct,rps,metric,bonferroni_significant
+PBS@500RPS vs ZTA-Naif@500RPS,30,30,295.8452,301.3642,348.919,369.3931,421.0,0.673495,False,-0.0644,negligible,-1.87,500.0,p99_latency_pbs_vs_naive,
+ZTA-Naif@500RPS vs ZTA-Cache@500RPS,30,30,301.3642,293.2984,369.3931,328.8666,503.0,0.437641,False,0.1178,negligible,2.68,500.0,p99_latency_ms,
+ZTA-Naif@2000RPS vs ZTA-Cache@2000RPS,30,30,2227.3224,2243.8343,2383.339,2436.4797,428.0,0.750587,False,-0.0489,negligible,-0.74,2000.0,p99_latency_ms,
+PBS@500RPS vs ZTA-Cache@500RPS,30,30,295.8452,293.2984,348.919,328.8666,475.0,0.717189,False,0.0556,negligible,0.86,500.0,p99_latency_pbs_vs_cache,
 Static TTL vs Graph-aware TTL,30,30,5927.9366,6140.5515,7634.5999,7287.5521,436.0,0.841801,False,-0.0311,negligible,-3.59,,p99_latency_ttl,
 Linear vs Fan-out,30,30,2243.8343,6140.5515,2436.4797,7287.5521,0.0,0.0,True,-1.0,large,-173.66,,topology_posthoc,True
 Linear vs Mesh,30,30,2243.8343,4028.9283,2436.4797,4936.4775,45.0,0.0,True,-0.9,large,-79.56,,topology_posthoc,True
 Fan-out vs Mesh,30,30,6140.5515,4028.9283,7287.5521,4936.4775,745.0,1.3e-05,True,0.6556,large,34.39,,topology_posthoc,True
-ZTA-Naif@2000RPS vs ZTA-Cache@2000RPS,30,30,2227.3224,2243.8343,2383.339,2436.4797,428.0,0.750587,False,-0.0489,negligible,-0.74,2000,p99_latency_ms,

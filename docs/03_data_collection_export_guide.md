@@ -37,7 +37,7 @@ data/
 │   └── final-export-YYYYMMDD/
 ├── processed/
 │   ├── latency-all-scenarios.csv
-│   ├── resource-all-scenarios.csv
+│   ├── resource-overhead.csv
 │   ├── cache-performance.csv
 │   └── revocation-latency.csv
 └── reports/
@@ -68,7 +68,7 @@ data/
 | `error_rate_pct` | float | Persentase request gagal |
 | `timestamp` | datetime | Waktu pengukuran (ISO 8601) |
 
-### resource-all-scenarios.csv
+### resource-overhead.csv
 
 | Kolom | Tipe | Keterangan |
 |---|---|---|

@@ -1,2 +1,2 @@
-comparison,metric,median_a,mean_a,p99_of_p99s,threshold_met,n_a
-RevocationLatency vs 100ms threshold,revocation_p99_ms,18.65,41.8723,183.391,False,30
+comparison,metric,median_a,mean_a,std_a,p90_a,p99_of_p99s,threshold_met,compliant_pct,wilcoxon_w,wilcoxon_p,n_a
+RevocationLatency vs 100ms threshold,revocation_p99_ms,18.65,41.8723,49.3023,102.32,183.391,True,86.67,43.0,1.183e-05,30

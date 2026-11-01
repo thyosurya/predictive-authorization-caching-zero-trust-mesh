@@ -80,6 +80,7 @@ def main():
         "data/processed/revocation-latency.csv",
         "data/processed/cache-performance.csv",
         "data/processed/edge-topology.json",
+        "data/processed/ablation/ablation-comparison-table.csv",
         "data/reports/descriptive-stats.csv",
         "data/reports/mann-whitney-results.csv",
         "data/reports/shapiro-wilk-results.csv",
@@ -121,7 +122,7 @@ def main():
         "runtime_environment": {
             "python": sys.version.split()[0],
             "go": go_ver,
-            "k6": "v0.49.0",
+            "k6": "v1.6.1",
             "envoy_wasm_abi": "v0.2.1",
             "kubernetes": "v1.28+",
             "istio": "v1.20+",
@@ -130,8 +131,8 @@ def main():
             "node_type": "Standard Virtual Machine",
             "vcpu": 2,
             "ram": "4 GB",
-            "os": "Ubuntu 22.04 LTS (Kernel 5.15+)",
-            "network": "Virtual Ethernet Bridge (Calico CNI)",
+            "os": "Debian GNU/Linux 12 (bookworm), kernel 6.1.0-47-amd64",
+            "network": "Virtual Ethernet Bridge (Flannel / k3s CNI)",
         },
         "canonical_benchmark_run": {
             "run_id": "run_full_30rep_20261028_022212",
@@ -147,11 +148,12 @@ def main():
             "duration": "3m",
             "cache_capacity": "K_local = 2 (EEF eviction)",
             "modes_evaluated": ["ModeGraphAware", "ModeFrequencyOnly (LFU)"],
-            "intermediate_transit_service": "cartservice (C_B = 0.500 > 0)",
+            "repetitions_per_mode": 5,
+            "intermediate_transit_service": "cartservice (C_B^raw = 0.500, normalized C_B = 1.000 > 0)",
         },
         "datasets_checksums": datasets_checksums,
         "reproducibility_commands": [
-            {"command": "python scripts/verify_traceability.py", "expected": "117/117 PASS"},
+            {"command": "python scripts/verify_traceability.py", "expected": "119/119 PASS"},
             {"command": "python scripts/verify_en_draft.py", "expected": "100% MATCH"},
             {"command": "python scripts/test_analyze_ablation.py", "expected": "7/7 PASS"},
             {"command": "python scripts/validate-data.py", "expected": "600/600 files valid"},
@@ -160,6 +162,7 @@ def main():
 
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
+        f.write("\n")
 
     print(f"[OK] Replication manifest generated at: {manifest_path}")
     print(f"     Git Commit: {git_info['commit_sha'][:8]} ({git_info['branch']})")

@@ -25,8 +25,8 @@ Semua versi di-pin secara eksplisit. Jangan gunakan `latest` - bisa menghasilkan
 
 | Komponen | Versi | Image / Source |
 |---|---|---|
-| OS Host | Ubuntu 22.04.3 LTS | `ubuntu:22.04` |
-| Kernel | 5.15.0-91-generic | - |
+| OS Host | Debian GNU/Linux 12 (bookworm) (kompatibel Ubuntu 22.04 LTS) | `debian:12` / `ubuntu:22.04` |
+| Kernel | 6.1.0-47-amd64 | - |
 | Docker | 24.0.7 | `docker.io/library/docker:24.0.7` |
 | k3s | v1.28.5+k3s1 | `rancher/k3s:v1.28.5-k3s1` |
 | Istio | 1.20.1 | `docker.io/istio/pilot:1.20.1` |
@@ -43,7 +43,7 @@ Semua versi di-pin secara eksplisit. Jangan gunakan `latest` - bisa menghasilkan
 | Prometheus | 2.48.1 | `prom/prometheus:v2.48.1` |
 | Grafana | 10.2.3 | `grafana/grafana:10.2.3` |
 | Jaeger | 1.52.0 | `jaegertracing/all-in-one:1.52.0` |
-| k6 | 0.48.0 | `grafana/k6:0.48.0` |
+| k6 | v1.6.1 (kompatibel >= 0.48.0) | `grafana/k6:1.6.1` |
 
 ### Bahasa & Library
 
@@ -55,10 +55,10 @@ Semua versi di-pin secara eksplisit. Jangan gunakan `latest` - bisa menghasilkan
 | gonum/graph | 0.14.0 |
 | google.golang.org/grpc | 1.61.0 |
 | prometheus/client_golang | 1.18.0 |
-| Python | 3.11.7 |
-| scipy | 1.11.4 |
-| pandas | 2.1.4 |
-| numpy | 1.26.3 |
+| Python | 3.11+ (diverifikasi s.d. 3.14) |
+| scipy | >= 1.11.4 |
+| pandas | >= 2.1.4 |
+| numpy | >= 1.26.3 |
 
 ### Go module checksums (go.sum excerpt)
 
@@ -206,12 +206,12 @@ wasm_filter:
 ### Parameter statistik
 
 ```
-Jumlah pengulangan per skenario : 30
+Jumlah pengulangan per skenario : 30 (studi ablasi multi-hop: n = 5)
 Taraf signifikansi (α)           : 0.05
 Uji normalitas                   : Shapiro-Wilk
-Uji hipotesis utama              : Mann-Whitney U (non-parametrik)
-Effect size                      : Cliff's Delta
-Uji multi-grup                   : Kruskal-Wallis + Dunn post-hoc (Bonferroni)
+Uji hipotesis utama              : Mann-Whitney U + TOST (margin Δ = 5%) + Wilcoxon signed-rank
+Effect size                      : Cliff's Delta + Hodges-Lehmann + Percentile Bootstrap CI (B = 10.000, seed = 42)
+Uji multi-grup                   : Kruskal-Wallis + Mann-Whitney U post-hoc (Bonferroni α' = 0.0167)
 ```
 
 ### Topologi service mesh
@@ -595,9 +595,9 @@ Tabel ini merangkum semua parameter kritis yang harus identik untuk mereplikasi 
 | Kubernetes | v1.28.5+k3s1 |
 | Istio | 1.20.1 |
 | OPA | 0.60.0 |
-| k6 | 0.48.0 |
+| k6 | v1.6.1 (kompatibel >= 0.48.0) |
 | Go | 1.22.0 |
-| Node spec | 4 vCPU / 8 GB RAM per node |
+| Node spec (Testbed Empiris Utama) | Single-Node VM Lean: 2 vCPU AMD EPYC 7713 / 4 GB RAM (Referensi Multi-Node: 4 vCPU / 8 GB RAM) |
 | Jaringan antar node | < 1 ms latency, 1 Gbps |
 | Tracing sampling | 100% |
 | Prometheus scrape interval | 5 detik |
@@ -607,7 +607,7 @@ Tabel ini merangkum semua parameter kritis yang harus identik untuk mereplikasi 
 | Warmup sebelum eksperimen | 5 menit @ 50 RPS |
 | Payload request | 1 KB (konstan) |
 | BaseTTL | 30.000 ms |
-| MaxTTL | 60.000 ms |
+| MaxTTL | 30.000 ms |
 | MinTTL | 5.000 ms |
 | Min calls/min untuk kandidat cache | 10 |
 | Taraf signifikansi (α) | 0.05 |

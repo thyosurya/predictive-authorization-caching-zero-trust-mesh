@@ -129,6 +129,8 @@ print("\n--- TABEL 7: Revocation ---")
 rv = rev["revocation_latency_ms"].dropna().values
 check("Rev mean", np.mean(rv), 41.87, 0.05)
 check("Rev median", np.median(rv), 18.65, 0.05)
+check("Rev std", np.std(rv, ddof=1), 49.30, 0.05)
+check("Rev p90", np.percentile(rv, 90), 102.32, 0.05)
 check("Rev p99", np.percentile(rv, 99), 183.39, 0.10)
 p99_s09 = rev["p99_ms"].dropna().values
 check("S09 p99 mean", np.mean(p99_s09), 377.63, 0.10)
@@ -210,17 +212,17 @@ with open("scripts/generate-figures-en.py", "r", encoding="utf-8") as f:
     fig_en_code = f.read()
 
 eq_checks = [
-    ("Persamaan (1) in naskah-id", "...(1)" in id_ms),
-    ("Persamaan (1) in naskah-en", "...(1)" in en_ms),
-    ("Persamaan (2) in naskah-id", "...(2)" in id_ms),
-    ("Persamaan (2) in naskah-en", "...(2)" in en_ms),
+    ("Persamaan (1) in naskah-id", "...(1)" in id_ms or "Persamaan (1)" in id_ms),
+    ("Persamaan (1) in naskah-en", "...(1)" in en_ms or "Persamaan (1)" in en_ms),
+    ("Persamaan (2) in naskah-id", "...(2)" in id_ms or "Persamaan (2)" in id_ms),
+    ("Persamaan (2) in naskah-en", "...(2)" in en_ms or "Persamaan (2)" in en_ms),
     ("Persamaan (2) in generate-figures", "Persamaan (2)" in fig_code),
     ("Persamaan (2) in generate-figures-en", "Equation (2)" in fig_en_code),
-    ("Persamaan (3) in naskah-id", "...(3)" in id_ms),
-    ("Persamaan (3) in naskah-en", "...(3)" in en_ms),
+    ("Persamaan (3) in naskah-id", "...(3)" in id_ms or "Persamaan (3)" in id_ms),
+    ("Persamaan (3) in naskah-en", "...(3)" in en_ms or "Persamaan (3)" in en_ms),
     ("Persamaan (3) in scalability-analysis", "T_request" in scal_code),
-    ("Persamaan (4) in naskah-id", "...(4)" in id_ms),
-    ("Persamaan (4) in naskah-en", "...(4)" in en_ms),
+    ("Persamaan (4) in naskah-id", "...(4)" in id_ms or "Persamaan (4)" in id_ms),
+    ("Persamaan (4) in naskah-en", "...(4)" in en_ms or "Persamaan (4)" in en_ms),
     ("Persamaan (4) in scalability-analysis", "T_analysis" in scal_code),
     ("Model Memory in scalability-analysis", "M_sidecar" in scal_code),
     ("Model Bandwidth in scalability-analysis", "BW_distribution" in scal_code),

@@ -1,8 +1,11 @@
-label,W,p_value,normal,metric,rps
-PBS 500 RPS,0.7334,5e-06,False,p99_latency_pbs_vs_naive,500.0
-ZTA-Naif 500 RPS,0.5933,0.0,False,p99_latency_pbs_vs_naive,500.0
-ZTA-Cache 500 RPS,0.7561,1.1e-05,False,p99_latency_ms,500.0
-ZTA-Naif 2000 RPS,0.7292,4e-06,False,p99_latency_ms,2000.0
-ZTA-Cache 2000 RPS,0.6537,0.0,False,p99_latency_ms,2000.0
-Graph-aware TTL (S07),0.7933,5e-05,False,p99_latency_ttl_comparison,
-Static TTL (S10),0.7137,2e-06,False,p99_latency_ttl_comparison,
+label,W,p_value,normal,n
+PBS 500 RPS,0.7334,5e-06,False,30
+ZTA-Naif 500 RPS,0.5933,0.0,False,30
+ZTA-Cache 500 RPS,0.7561,1.1e-05,False,30
+ZTA-Naif 2000 RPS,0.7292,4e-06,False,30
+ZTA-Cache 2000 RPS,0.6537,0.0,False,30
+ZTA-Cache 5000 RPS (S06),0.846,0.000511,False,30
+ZTA-Cache Mesh 2000 RPS (S08),0.7909,4.5e-05,False,30
+Revocation Test 500 RPS (S09),0.8259,0.000202,False,30
+Graph-aware TTL (S07),0.7933,5e-05,False,30
+Static TTL (S10),0.7137,2e-06,False,30

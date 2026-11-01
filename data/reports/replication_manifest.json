@@ -1,6 +1,6 @@
 {
   "manifest_version": "1.0.0",
-  "generated_at": "2026-10-30T16:47:25.036183",
+  "generated_at": "2026-11-01T11:29:26.699781",
   "title": "Predictive Authorization Caching with Microservice Graph Prioritization in Zero-Trust Service Mesh",
   "authors": [
     {
@@ -12,13 +12,13 @@
   "git": {
     "repository": "thyosurya/zta-predictive-cache",
     "branch": "main",
-    "commit_sha": "e36626fe72fbea12c418d2d86a1e4aeacb10c7d0",
-    "commit_date": "2026-10-30T16:39:05+07:00"
+    "commit_sha": "44201e7d7411d3c57d12109d8fd08223220fa470",
+    "commit_date": "2026-11-01T11:29:16+07:00"
   },
   "runtime_environment": {
     "python": "3.14.0",
     "go": "go version go1.25.3 windows/amd64",
-    "k6": "v0.49.0",
+    "k6": "v1.6.1",
     "envoy_wasm_abi": "v0.2.1",
     "kubernetes": "v1.28+",
     "istio": "v1.20+"
@@ -27,8 +27,8 @@
     "node_type": "Standard Virtual Machine",
     "vcpu": 2,
     "ram": "4 GB",
-    "os": "Ubuntu 22.04 LTS (Kernel 5.15+)",
-    "network": "Virtual Ethernet Bridge (Calico CNI)"
+    "os": "Debian GNU/Linux 12 (bookworm), kernel 6.1.0-47-amd64",
+    "network": "Virtual Ethernet Bridge (Flannel / k3s CNI)"
   },
   "canonical_benchmark_run": {
     "run_id": "run_full_30rep_20261028_022212",
@@ -58,7 +58,8 @@
       "ModeGraphAware",
       "ModeFrequencyOnly (LFU)"
     ],
-    "intermediate_transit_service": "cartservice (C_B = 0.500 > 0)"
+    "repetitions_per_mode": 5,
+    "intermediate_transit_service": "cartservice (C_B^raw = 0.500, normalized C_B = 1.000 > 0)"
   },
   "datasets_checksums": {
     "data/processed/latency-all-scenarios.csv": {
@@ -86,6 +87,11 @@
       "size_bytes": 189,
       "status": "verified"
     },
+    "data/processed/ablation/ablation-comparison-table.csv": {
+      "sha256": "14eda55ef3e93a63542fa3aa3a2fa16327ab36bf8053de49aab4195e9d34637d",
+      "size_bytes": 1407,
+      "status": "verified"
+    },
     "data/reports/descriptive-stats.csv": {
       "sha256": "9700f19f2285084fd096f9d5bbcbe4cfa9c588c3ddd93ef6dc14c155510db3ad",
       "size_bytes": 1738,
@@ -102,7 +108,7 @@
       "status": "verified"
     },
     "data/reports/kruskal-wallis-results.csv": {
-      "sha256": "0c728fde4887e08426c8b16fc3c897c02fad00b6e9296c9054ea88f6b2da6631",
+      "sha256": "c6c4acecaa48646773f97e2ef3d7d5ea5160a709ecd304fb9fefc71f3922ae6b",
       "size_bytes": 393,
       "status": "verified"
     },
@@ -112,15 +118,15 @@
       "status": "verified"
     },
     "data/reports/revocation-summary.csv": {
-      "sha256": "fa7681e824de6c3a303dd03ac4df5178d61037cba9fadfd2699ef53c9422802b",
-      "size_bytes": 152,
+      "sha256": "e605e613c386a9e1cef11f1edcd99e10350db0085a61d01ebc88ca495573dec6",
+      "size_bytes": 235,
       "status": "verified"
     }
   },
   "reproducibility_commands": [
     {
       "command": "python scripts/verify_traceability.py",
-      "expected": "117/117 PASS"
+      "expected": "119/119 PASS"
     },
     {
       "command": "python scripts/verify_en_draft.py",

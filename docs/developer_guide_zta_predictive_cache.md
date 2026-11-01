@@ -553,7 +553,7 @@ const (
 
 const (
     BaseTTL = 30 * time.Second
-    MaxTTL  = 60 * time.Second
+    MaxTTL  = 30 * time.Second
     MinTTL  = 5 * time.Second
 )
 
@@ -1243,20 +1243,20 @@ bash scripts/run-all-scenarios.sh
 
 ```bash
 # Export dari Prometheus ke CSV
-python3 scripts/export_metrics.py \
+python3 scripts/export-metrics.py \
   --prometheus-url http://localhost:9090 \
   --start "2024-01-01T00:00:00Z" \
   --end "2024-01-01T12:00:00Z" \
   --output data/raw/
 
 # Analisis dengan Python
-python3 scripts/statistical_analysis.py \
+python3 scripts/statistical-analysis.py \
   --data-dir data/raw/ \
   --output reports/
 ```
 
 ```python
-# scripts/statistical_analysis.py
+# scripts/statistical-analysis.py
 import pandas as pd
 from scipy import stats
 import numpy as np
